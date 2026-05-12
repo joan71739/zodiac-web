@@ -1,56 +1,82 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Form, Button, Card, Alert } from 'react-bootstrap'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Form, Button, Card, Alert, Spinner } from 'react-bootstrap'
+import { getClient, createClient, updateClient } from '../api/clients'
 
 function ClientForm() {
-    const navigate = useNavigate()
     const { id } = useParams()
+    const navigate = useNavigate()
     const isEdit = !!id
 
     const [formData, setFormData] = useState({
         name: '',
         birthDate: '',
         birthTime: '',
-        birthPlace: '',
+        birthPlace: ''
     })
+    const [loading, setLoading] = useState(isEdit)
+    const [submitting, setSubmitting] = useState(false)
     const [errorMsg, setErrorMsg] = useState('')
 
     useEffect(() => {
-        if (isEdit) {
-            // 假資料，後端好了換成 API
-            setTimeout(() => {
+        if (!isEdit) return
+        const fetchClient = async () => {
+            try {
+                const res = await getClient(id)
+                const c = res.data
                 setFormData({
-                    name: '王小明',
-                    birthDate: '1993-08-10',
-                    birthTime: '08:30',
-                    birthPlace: '台北',
+                    name: c.name || '',
+                    birthDate: c.birthDate || '',
+                    birthTime: c.birthTime || '',
+                    birthPlace: c.birthPlace || ''
                 })
-            }, 0)
+            } catch (err) {
+                setErrorMsg('載入客戶資料失敗')
+            } finally {
+                setLoading(false)
+            }
         }
-    }, [id])
+        fetchClient()
+    }, [id, isEdit])
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault() // 先擋掉預設行為
+        e.preventDefault()
         if (!formData.name.trim()) {
-            setErrorMsg('請輸入姓名')
+            setErrorMsg('姓名為必填欄位')
             return
         }
-        // 後端好了在這裡呼叫 createClient / updateClient
-        alert(isEdit ? '編輯成功（假）' : '新增成功（假）')
-        navigate('/')
+        try {
+            setSubmitting(true)
+            if (isEdit) {
+                await updateClient(id, formData)
+            } else {
+                await createClient(formData)
+            }
+            navigate('/')
+        } catch (err) {
+            setErrorMsg(isEdit ? '編輯失敗，請稍後再試' : '新增失敗，請稍後再試')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="text-center mt-5">
+                <Spinner animation="border" variant="primary" />
+            </div>
+        )
     }
 
     return (
         <div>
             <h4 className="mb-4">{isEdit ? '編輯客戶' : '新增客戶'}</h4>
 
-            {errorMsg && (
-                <Alert variant="danger">{errorMsg}</Alert>
-            )}
+            {errorMsg && <Alert variant="danger" dismissible onClose={() => setErrorMsg('')}>{errorMsg}</Alert>}
 
             <Card>
                 <Card.Body>
@@ -97,10 +123,10 @@ function ClientForm() {
                             />
                         </Form.Group>
 
-                        <Button variant="primary" type="submit" className="me-2">
-                            {isEdit ? '儲存編輯' : '新增客戶'}
+                        <Button variant="primary" type="submit" className="me-2" disabled={submitting}>
+                            {submitting ? <Spinner animation="border" size="sm" /> : (isEdit ? '儲存編輯' : '新增客戶')}
                         </Button>
-                        <Button variant="secondary" onClick={() => navigate('/')}>
+                        <Button variant="secondary" onClick={() => navigate('/')} disabled={submitting}>
                             取消
                         </Button>
                     </Form>
