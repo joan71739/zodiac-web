@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Tabs, Tab, Button, Card, Alert, Spinner } from 'react-bootstrap'
-import { useRef } from 'react'
+import { getClient } from '../api/clients'
+import { exportChart } from '../api/export'
 import PlanetTable from '../components/PlanetTable'
 import HouseTable from '../components/HouseTable'
 import AspectTable from '../components/AspectTable'
@@ -17,23 +18,27 @@ function ClientDetail() {
     const [loading, setLoading] = useState(true)
     const [errorMsg, setErrorMsg] = useState('')
 
-    const [chartImage, setChartImage] = useState(null)
-    const fileInputRef = useRef(null)
-
     useEffect(() => {
-        setTimeout(() => {
-            // 假資料，後端好了換成 API
-            setClient({
-                id: 1,
-                name: '王小明',
-                birthDate: '1993-08-10',
-                birthTime: '08:30',
-                birthPlace: '台北',
-                createdAt: '2025-01-01',
-            })
-            setLoading(false)
-        }, 0)
+        const fetchClient = async () => {
+            try {
+                const res = await getClient(id)
+                setClient(res.data)
+            } catch (err) {
+                setErrorMsg('載入客戶資料失敗')
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchClient()
     }, [id])
+
+    const handleExportChart = async () => {
+        try {
+            await exportChart(id)
+        } catch (err) {
+            setErrorMsg('匯出失敗，請稍後再試')
+        }
+    }
 
     if (loading) {
         return (
@@ -45,18 +50,6 @@ function ClientDetail() {
 
     if (!client) {
         return <Alert variant="danger">找不到客戶資料</Alert>
-    }
-
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0]
-        if (!file) return
-        // 後端好了換成 uploadChartImage(id, file)
-        const previewUrl = URL.createObjectURL(file)
-        setChartImage(previewUrl)
-    }
-
-    const handleImageClick = () => {
-        fileInputRef.current.click()
     }
 
     return (
@@ -77,6 +70,13 @@ function ClientDetail() {
                         返回列表
                     </Button>
                     <Button
+                        variant="outline-success"
+                        className="me-2"
+                        onClick={handleExportChart}
+                    >
+                        匯出命盤
+                    </Button>
+                    <Button
                         variant="outline-warning"
                         onClick={() => navigate(`/clients/${id}/edit`)}
                     >
@@ -85,19 +85,19 @@ function ClientDetail() {
                 </div>
             </div>
 
-            {errorMsg && <Alert variant="danger">{errorMsg}</Alert>}
+            {errorMsg && <Alert variant="danger" dismissible onClose={() => setErrorMsg('')}>{errorMsg}</Alert>}
 
             <Tabs defaultActiveKey="chart" className="mb-3">
                 <Tab eventKey="chart" title="命盤資料">
                     <Card>
                         <Card.Body>
-                            <ChartImage />
+                            <ChartImage clientId={id} />
                             <hr />
-                            <PlanetTable />
+                            <PlanetTable clientId={id} />
                             <hr />
-                            <HouseTable />
+                            <HouseTable clientId={id} />
                             <hr />
-                            <AspectTable />
+                            <AspectTable clientId={id} />
                         </Card.Body>
                     </Card>
                 </Tab>
@@ -105,7 +105,7 @@ function ClientDetail() {
                 <Tab eventKey="analysis" title="我的解析">
                     <Card>
                         <Card.Body>
-                            <AnalysisBlock />
+                            <AnalysisBlock clientId={id} />
                         </Card.Body>
                     </Card>
                 </Tab>
@@ -113,7 +113,7 @@ function ClientDetail() {
                 <Tab eventKey="log" title="諮詢 Log">
                     <Card>
                         <Card.Body>
-                            <ConsultationLog />
+                            <ConsultationLog clientId={id} />
                         </Card.Body>
                     </Card>
                 </Tab>
