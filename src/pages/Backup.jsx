@@ -31,10 +31,12 @@ function Backup() {
         try {
             setBackingUp(true)
             setErrorMsg('')
-            const res = await createBackup()
-            setBackups([res.data, ...backups])
-            setSuccessMsg('備份成功！')
-            setTimeout(() => setSuccessMsg(''), 3000)
+            await createBackup()
+            setSuccessMsg('備份已啟動！5 秒後自動重新整理...')
+            setTimeout(async () => {
+                await fetchBackups()
+                setSuccessMsg('')
+            }, 5000)
         } catch (err) {
             setErrorMsg('備份失敗，請稍後再試')
         } finally {
