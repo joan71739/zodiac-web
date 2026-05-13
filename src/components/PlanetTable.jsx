@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react'
 import { Table, Form, Button, Spinner, Alert } from 'react-bootstrap'
 import { getPlanets, createPlanets, updatePlanet } from '../api/clients'
 
+// v8：移除「命主星」，改為 checkbox
 const PLANETS = [
     '太陽', '月亮', '水星', '金星', '火星',
     '木星', '土星', '天王星', '海王星', '冥王星',
-    '凱龍星', '命主星'
+    '凱龍星'
 ]
+
+// 只有這 7 個內行星可以標記為命主星
+const LORD_ELIGIBLE = new Set(['太陽', '月亮', '水星', '金星', '火星', '木星', '土星'])
 
 const SIGNS = [
     '牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座',
@@ -23,7 +27,8 @@ const defaultRows = () =>
         degreeNum: '',
         minuteNum: '',
         house: '',
-        notes: ''
+        notes: '',
+        isLord: false   // v8 新增
     }))
 
 function PlanetTable({ clientId }) {
@@ -39,7 +44,6 @@ function PlanetTable({ clientId }) {
             try {
                 const res = await getPlanets(clientId)
                 if (res.data && res.data.length > 0) {
-                    // 後端有資料：用後端資料合併到固定 12 行
                     const merged = defaultRows().map(def => {
                         const found = res.data.find(p => p.planet === def.planet)
                         return found ? { ...def, ...found } : def
@@ -61,6 +65,16 @@ function PlanetTable({ clientId }) {
         setPlanets(updated)
     }
 
+    // v8：命主星 checkbox — 點選後同批其他行全部取消（只能有一個）
+    const handleLordToggle = (index) => {
+        const isCurrentlyLord = planets[index].isLord
+        const updated = planets.map((p, i) => ({
+            ...p,
+            isLord: i === index ? !isCurrentlyLord : false
+        }))
+        setPlanets(updated)
+    }
+
     // 初次建立：POST 整批
     const handleCreateAll = async () => {
         try {
@@ -71,10 +85,15 @@ function PlanetTable({ clientId }) {
                 degreeNum: p.degreeNum !== '' ? parseInt(p.degreeNum) : null,
                 minuteNum: p.minuteNum !== '' ? parseInt(p.minuteNum) : null,
                 house: p.house !== '' ? parseInt(p.house) : null,
-                notes: p.notes
+                notes: p.notes,
+                isLord: p.isLord  // v8 新增
             }))
             const res = await createPlanets(clientId, payload)
-            setPlanets(res.data)
+            const merged = defaultRows().map(def => {
+                const found = res.data.find(p => p.planet === def.planet)
+                return found ? { ...def, ...found } : def
+            })
+            setPlanets(merged)
         } catch (err) {
             setErrorMsg('建立行星資料失敗')
         } finally {
@@ -94,7 +113,8 @@ function PlanetTable({ clientId }) {
                 degreeNum: row.degreeNum !== '' ? parseInt(row.degreeNum) : null,
                 minuteNum: row.minuteNum !== '' ? parseInt(row.minuteNum) : null,
                 house: row.house !== '' ? parseInt(row.house) : null,
-                notes: row.notes
+                notes: row.notes,
+                isLord: row.isLord  // v8 新增
             }
             const res = await updatePlanet(clientId, row.id, payload)
             const updated = [...planets]
@@ -127,24 +147,48 @@ function PlanetTable({ clientId }) {
                 )}
             </div>
 
-            {errorMsg && <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">{errorMsg}</Alert>}
+            {errorMsg && (
+                <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">
+                    {errorMsg}
+                </Alert>
+            )}
 
             <Table bordered hover responsive size="sm">
                 <thead className="table-dark">
                     <tr>
+                        <th style={{ width: '60px' }} className="text-center">命主星</th>
                         <th>行星</th>
                         <th>星座</th>
-                        <th>度</th>
-                        <th>分</th>
-                        <th>宮位</th>
+                        <th style={{ width: '70px' }}>度</th>
+                        <th style={{ width: '70px' }}>分</th>
+                        <th style={{ width: '90px' }}>宮位</th>
                         <th>備註</th>
-                        {!isFirstCreate && <th></th>}
+                        {!isFirstCreate && <th style={{ width: '60px' }}></th>}
                     </tr>
                 </thead>
                 <tbody>
                     {planets.map((row, index) => (
-                        <tr key={row.planet}>
-                            <td className="align-middle fw-bold">{row.planet}</td>
+                        <tr
+                            key={row.planet}
+                            style={row.isLord ? { backgroundColor: '#fff8e1' } : {}}
+                        >
+                            {/* 命主星 checkbox：只有 7 個內行星顯示 */}
+                            <td className="text-center align-middle">
+                                {LORD_ELIGIBLE.has(row.planet) ? (
+                                    <Form.Check
+                                        type="checkbox"
+                                        checked={!!row.isLord}
+                                        onChange={() => handleLordToggle(index)}
+                                        title="標記為命主星"
+                                    />
+                                ) : null}
+                            </td>
+
+                            <td className="align-middle fw-bold">
+                                {row.planet}
+                                {row.isLord && <span className="ms-1 text-warning">★</span>}
+                            </td>
+
                             <td>
                                 <Form.Select
                                     size="sm"
@@ -155,7 +199,8 @@ function PlanetTable({ clientId }) {
                                     {SIGNS.map(s => <option key={s} value={s}>{s}</option>)}
                                 </Form.Select>
                             </td>
-                            <td style={{ width: '60px' }}>
+
+                            <td>
                                 <Form.Control
                                     size="sm"
                                     type="number"
@@ -166,7 +211,8 @@ function PlanetTable({ clientId }) {
                                     onChange={e => handleChange(index, 'degreeNum', e.target.value)}
                                 />
                             </td>
-                            <td style={{ width: '60px' }}>
+
+                            <td>
                                 <Form.Control
                                     size="sm"
                                     type="number"
@@ -177,6 +223,7 @@ function PlanetTable({ clientId }) {
                                     onChange={e => handleChange(index, 'minuteNum', e.target.value)}
                                 />
                             </td>
+
                             <td>
                                 <Form.Select
                                     size="sm"
@@ -187,6 +234,7 @@ function PlanetTable({ clientId }) {
                                     {HOUSES.map(h => <option key={h} value={h}>{h} 宮</option>)}
                                 </Form.Select>
                             </td>
+
                             <td>
                                 <Form.Control
                                     size="sm"
@@ -196,6 +244,7 @@ function PlanetTable({ clientId }) {
                                     onChange={e => handleChange(index, 'notes', e.target.value)}
                                 />
                             </td>
+
                             {!isFirstCreate && (
                                 <td className="text-center align-middle">
                                     {successIndex === index ? (
@@ -207,7 +256,9 @@ function PlanetTable({ clientId }) {
                                             onClick={() => handleSaveRow(index)}
                                             disabled={savingIndex === index}
                                         >
-                                            {savingIndex === index ? <Spinner animation="border" size="sm" /> : '儲存'}
+                                            {savingIndex === index
+                                                ? <Spinner animation="border" size="sm" />
+                                                : '儲存'}
                                         </Button>
                                     )}
                                 </td>

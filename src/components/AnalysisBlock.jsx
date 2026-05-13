@@ -16,6 +16,7 @@ function AnalysisBlock({ clientId }) {
         const fetchNotes = async () => {
             try {
                 const res = await getNotes(clientId)
+                // 後端已改為 sort_order DESC，直接使用即可（最新在最上面）
                 setBlocks(res.data)
             } catch (err) {
                 setErrorMsg('載入解析資料失敗')
@@ -33,7 +34,8 @@ function AnalysisBlock({ clientId }) {
     const handleAdd = async () => {
         try {
             const res = await createNote(clientId, { title: '', content: '' })
-            setBlocks([...blocks, res.data])
+            // v8：新增的放在最上面（prepend）
+            setBlocks([res.data, ...blocks])
         } catch (err) {
             setErrorMsg('新增解析失敗')
         }
@@ -87,9 +89,15 @@ function AnalysisBlock({ clientId }) {
                 </div>
             </div>
 
-            {errorMsg && <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">{errorMsg}</Alert>}
+            {errorMsg && (
+                <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">
+                    {errorMsg}
+                </Alert>
+            )}
 
-            {blocks.length === 0 && <p className="text-muted small">尚無解析，點擊「新增區塊」開始建立</p>}
+            {blocks.length === 0 && (
+                <p className="text-muted small">尚無解析，點擊「新增區塊」開始建立</p>
+            )}
 
             {blocks.map(block => (
                 <Card key={block.id} className="mb-3">
@@ -120,8 +128,9 @@ function AnalysisBlock({ clientId }) {
                                 >
                                     {savingId === block.id
                                         ? <Spinner animation="border" size="sm" />
-                                        : successId === block.id ? '✅ 已儲存' : '儲存'
-                                    }
+                                        : successId === block.id
+                                            ? '✅ 已儲存'
+                                            : '儲存'}
                                 </Button>
                                 <Button
                                     variant="outline-danger"
@@ -132,11 +141,10 @@ function AnalysisBlock({ clientId }) {
                                 </Button>
                             </div>
                         </div>
-
                         <Form.Control
                             as="textarea"
-                            rows={4}
-                            placeholder="在此輸入解析內容..."
+                            rows={5}
+                            placeholder="在這裡輸入解析內容..."
                             value={block.content}
                             onChange={e => handleChange(block.id, 'content', e.target.value)}
                         />
