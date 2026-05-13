@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { searchClients } from '../api/clients'
 import { exportSearch } from '../api/export'
 
+// v8：命主星保留在下拉選單，後端查詢時會轉換為 is_lord = TRUE
 const PLANETS = [
     '太陽', '月亮', '水星', '金星', '火星',
     '木星', '土星', '天王星', '海王星', '冥王星', '凱龍星', '命主星'
