@@ -1,76 +1,189 @@
-import { Link, useLocation } from 'react-router-dom'
+// ============================================================
+// Navbar.jsx — V2 修改版
+// 修改說明：側欄新增「合盤比較」入口，導向 /compare
+// 星盤優化 V2 — FE-11
+// ============================================================
 
-function Sidebar() {
-    const location = useLocation()
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { Button } from 'react-bootstrap';
 
-    return (
-        <div className="sidebar-wrapper flex-shrink-0 p-3">
-            <Link
-                to="/"
-                className="d-flex align-items-center pb-3 mb-3 link-body-emphasis text-decoration-none border-bottom"
+const NAV_ITEMS = [
+  { to: '/',        label: '客戶列表', icon: '👥' },
+  { to: '/search',  label: '行星篩選', icon: '🔍' },
+  // V2 新增
+  { to: '/compare', label: '合盤比較', icon: '⚡', badge: 'V2' },
+  { to: '/backup',  label: '備份管理', icon: '💾' },
+];
+
+export default function Navbar() {
+  const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+
+  const width = collapsed ? 56 : 200;
+
+  return (
+    <div
+      style={{
+        width,
+        minHeight: '100vh',
+        backgroundColor: '#1C1C2E',
+        color: '#E8E0F0',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 0.2s ease',
+        overflow: 'hidden',
+        flexShrink: 0,
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+      }}
+    >
+      {/* Logo / 標題列 */}
+      <div
+        style={{
+          padding: '16px 12px',
+          borderBottom: '1px solid #2D2D45',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+        }}
+      >
+        {!collapsed && (
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              letterSpacing: '0.04em',
+              color: '#D4AF37',
+            }}
+          >
+            ✦ 占星顧問後台
+          </span>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#888',
+            cursor: 'pointer',
+            fontSize: '1rem',
+            padding: 0,
+            lineHeight: 1,
+          }}
+          title={collapsed ? '展開側欄' : '收合側欄'}
+        >
+          {collapsed ? '▶' : '◀'}
+        </button>
+      </div>
+
+      {/* 導覽項目 */}
+      <nav style={{ flex: 1, paddingTop: 8 }}>
+        {NAV_ITEMS.map(({ to, label, icon, badge }) => {
+          const isActive = to === '/'
+            ? location.pathname === '/'
+            : location.pathname.startsWith(to);
+
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: collapsed ? 0 : 10,
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                padding: collapsed ? '12px 0' : '10px 16px',
+                color: isActive ? '#D4AF37' : '#B0A8C8',
+                backgroundColor: isActive ? '#2D2D45' : 'transparent',
+                borderLeft: isActive ? '3px solid #D4AF37' : '3px solid transparent',
+                textDecoration: 'none',
+                fontSize: '0.88rem',
+                fontWeight: isActive ? 600 : 400,
+                transition: 'background 0.15s, color 0.15s',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
             >
-                <span className="fs-5 fw-semibold">🔮 占星顧問系統</span>
-            </Link>
-
-            <ul className="list-unstyled ps-0">
-                <li className="mb-1">
-                    <button
-                        className="btn btn-toggle d-inline-flex align-items-center rounded border-0"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#menu-collapse"
-                        aria-expanded="true"
+              <span style={{ fontSize: '1rem', flexShrink: 0 }}>{icon}</span>
+              {!collapsed && (
+                <>
+                  <span>{label}</span>
+                  {badge && (
+                    <span
+                      style={{
+                        marginLeft: 6,
+                        background: '#D4AF37',
+                        color: '#1C1C2E',
+                        borderRadius: 3,
+                        padding: '1px 5px',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.02em',
+                      }}
                     >
-                        選單
-                    </button>
-                    <div className="collapse show" id="menu-collapse">
-                        <ul className="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                            <li>
-                                <Link
-                                    to="/"
-                                    className={`d-inline-flex text-decoration-none rounded ${location.pathname === '/' ? 'active' : ''}`}
-                                >
-                                    👥 客戶列表
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/search"
-                                    className={`d-inline-flex text-decoration-none rounded ${location.pathname === '/search' ? 'active' : ''}`}
-                                >
-                                    🔍 篩選客戶
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
+                      {badge}
+                    </span>
+                  )}
+                </>
+              )}
+              {/* 收合狀態下的 Tooltip 替代 */}
+              {collapsed && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    left: '100%',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    backgroundColor: '#2D2D45',
+                    color: '#E8E0F0',
+                    padding: '4px 10px',
+                    borderRadius: 4,
+                    fontSize: '0.8rem',
+                    whiteSpace: 'nowrap',
+                    zIndex: 1000,
+                    display: 'none',
+                    pointerEvents: 'none',
+                  }}
+                  className="navbar-tooltip"
+                >
+                  {label}
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
 
-                <li className="border-top my-3"></li>
-
-                <li className="mb-1">
-                    <button
-                        className="btn btn-toggle d-inline-flex align-items-center rounded border-0"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#system-collapse"
-                        aria-expanded="true"
-                    >
-                        系統
-                    </button>
-                    <div className="collapse show" id="system-collapse">
-                        <ul className="btn-toggle-nav list-unstyled fw-normal pb-1 small">
-                            <li>
-                                <Link
-                                    to="/backup"
-                                    className={`d-inline-flex text-decoration-none rounded ${location.pathname === '/backup' ? 'active' : ''}`}
-                                >
-                                    💾 備份管理
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-            </ul>
+      {/* 底部版本資訊 */}
+      {!collapsed && (
+        <div
+          style={{
+            padding: '10px 16px',
+            borderTop: '1px solid #2D2D45',
+            fontSize: '0.7rem',
+            color: '#555',
+            letterSpacing: '0.03em',
+          }}
+        >
+          v8 + 星盤優化 V2
         </div>
-    )
-}
+      )}
 
-export default Sidebar
+      {/* CSS for tooltip on hover */}
+      <style>{`
+        nav a:hover .navbar-tooltip {
+          display: block !important;
+        }
+        nav a:hover {
+          background-color: #2A2A40 !important;
+          color: #D4AF37 !important;
+        }
+      `}</style>
+    </div>
+  );
+}
