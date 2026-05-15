@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Form, Button, Card, Alert, Spinner } from 'react-bootstrap'
+import { Form, Button, Card, Alert, Spinner, Row, Col } from 'react-bootstrap'
 import { getClient, createClient, updateClient } from '../api/clients'
+
+const SIGNS = [
+    '牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座',
+    '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'
+]
 
 function ClientForm() {
     const { id } = useParams()
@@ -12,7 +17,14 @@ function ClientForm() {
         name: '',
         birthDate: '',
         birthTime: '',
-        birthPlace: ''
+        birthPlace: '',
+        // v9：四軸資訊（選填）
+        ascSign: '',
+        ascDegreeNum: '',
+        ascMinuteNum: '',
+        mcSign: '',
+        mcDegreeNum: '',
+        mcMinuteNum: '',
     })
     const [loading, setLoading] = useState(isEdit)
     const [submitting, setSubmitting] = useState(false)
@@ -25,10 +37,17 @@ function ClientForm() {
                 const res = await getClient(id)
                 const c = res.data
                 setFormData({
-                    name: c.name || '',
-                    birthDate: c.birthDate || '',
-                    birthTime: c.birthTime || '',
-                    birthPlace: c.birthPlace || ''
+                    name:         c.name        || '',
+                    birthDate:    c.birthDate   || '',
+                    birthTime:    c.birthTime   || '',
+                    birthPlace:   c.birthPlace  || '',
+                    // v9：回填四軸資訊（null 時顯示空字串）
+                    ascSign:      c.ascSign      ?? '',
+                    ascDegreeNum: c.ascDegreeNum != null ? String(c.ascDegreeNum) : '',
+                    ascMinuteNum: c.ascMinuteNum != null ? String(c.ascMinuteNum) : '',
+                    mcSign:       c.mcSign       ?? '',
+                    mcDegreeNum:  c.mcDegreeNum  != null ? String(c.mcDegreeNum)  : '',
+                    mcMinuteNum:  c.mcMinuteNum  != null ? String(c.mcMinuteNum)  : '',
                 })
             } catch (err) {
                 setErrorMsg('載入客戶資料失敗')
@@ -51,10 +70,26 @@ function ClientForm() {
         }
         try {
             setSubmitting(true)
+
+            // 整理 payload：數字欄位空字串 → null，避免後端 Short 轉型錯誤
+            const payload = {
+                name:      formData.name.trim(),
+                birthDate: formData.birthDate  || null,
+                birthTime: formData.birthTime  || null,
+                birthPlace: formData.birthPlace || null,
+                // v9：四軸資訊
+                ascSign:      formData.ascSign      || null,
+                ascDegreeNum: formData.ascDegreeNum !== '' ? Number(formData.ascDegreeNum) : null,
+                ascMinuteNum: formData.ascMinuteNum !== '' ? Number(formData.ascMinuteNum) : null,
+                mcSign:       formData.mcSign       || null,
+                mcDegreeNum:  formData.mcDegreeNum  !== '' ? Number(formData.mcDegreeNum)  : null,
+                mcMinuteNum:  formData.mcMinuteNum  !== '' ? Number(formData.mcMinuteNum)  : null,
+            }
+
             if (isEdit) {
-                await updateClient(id, formData)
+                await updateClient(id, payload)
             } else {
-                await createClient(formData)
+                await createClient(payload)
             }
             navigate('/')
         } catch (err) {
@@ -76,11 +111,17 @@ function ClientForm() {
         <div>
             <h4 className="mb-4">{isEdit ? '編輯客戶' : '新增客戶'}</h4>
 
-            {errorMsg && <Alert variant="danger" dismissible onClose={() => setErrorMsg('')}>{errorMsg}</Alert>}
+            {errorMsg && (
+                <Alert variant="danger" dismissible onClose={() => setErrorMsg('')}>
+                    {errorMsg}
+                </Alert>
+            )}
 
             <Card>
                 <Card.Body>
                     <Form onSubmit={handleSubmit}>
+
+                        {/* ── 基本資料 ──────────────────────────── */}
                         <Form.Group className="mb-3">
                             <Form.Label>姓名 *</Form.Label>
                             <Form.Control
@@ -123,12 +164,107 @@ function ClientForm() {
                             />
                         </Form.Group>
 
-                        <Button variant="primary" type="submit" className="me-2" disabled={submitting}>
-                            {submitting ? <Spinner animation="border" size="sm" /> : (isEdit ? '儲存編輯' : '新增客戶')}
+                        {/* ── v9：四軸資訊（選填）────────────────── */}
+                        <hr />
+                        <h6 className="mb-3 text-muted">四軸資訊（選填）</h6>
+
+                        {/* 上升點 ASC */}
+                        <Form.Label className="fw-semibold">上升點 ASC</Form.Label>
+                        <Row className="mb-3 g-2">
+                            <Col md={5}>
+                                <Form.Select
+                                    name="ascSign"
+                                    value={formData.ascSign}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">-- 星座 --</option>
+                                    {SIGNS.map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </Form.Select>
+                            </Col>
+                            <Col md={3}>
+                                <Form.Control
+                                    type="number"
+                                    name="ascDegreeNum"
+                                    placeholder="度 (0-29)"
+                                    min={0}
+                                    max={29}
+                                    value={formData.ascDegreeNum}
+                                    onChange={handleChange}
+                                />
+                            </Col>
+                            <Col md={3}>
+                                <Form.Control
+                                    type="number"
+                                    name="ascMinuteNum"
+                                    placeholder="分 (0-59)"
+                                    min={0}
+                                    max={59}
+                                    value={formData.ascMinuteNum}
+                                    onChange={handleChange}
+                                />
+                            </Col>
+                        </Row>
+
+                        {/* 天頂 MC */}
+                        <Form.Label className="fw-semibold">天頂 MC</Form.Label>
+                        <Row className="mb-4 g-2">
+                            <Col md={5}>
+                                <Form.Select
+                                    name="mcSign"
+                                    value={formData.mcSign}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">-- 星座 --</option>
+                                    {SIGNS.map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </Form.Select>
+                            </Col>
+                            <Col md={3}>
+                                <Form.Control
+                                    type="number"
+                                    name="mcDegreeNum"
+                                    placeholder="度 (0-29)"
+                                    min={0}
+                                    max={29}
+                                    value={formData.mcDegreeNum}
+                                    onChange={handleChange}
+                                />
+                            </Col>
+                            <Col md={3}>
+                                <Form.Control
+                                    type="number"
+                                    name="mcMinuteNum"
+                                    placeholder="分 (0-59)"
+                                    min={0}
+                                    max={59}
+                                    value={formData.mcMinuteNum}
+                                    onChange={handleChange}
+                                />
+                            </Col>
+                        </Row>
+                        {/* ───────────────────────────────────────── */}
+
+                        <Button
+                            variant="primary"
+                            type="submit"
+                            className="me-2"
+                            disabled={submitting}
+                        >
+                            {submitting
+                                ? <Spinner animation="border" size="sm" />
+                                : (isEdit ? '儲存編輯' : '新增客戶')}
                         </Button>
-                        <Button variant="secondary" onClick={() => navigate('/')} disabled={submitting}>
+                        <Button
+                            variant="secondary"
+                            onClick={() => navigate('/')}
+                            disabled={submitting}
+                        >
                             取消
                         </Button>
+
                     </Form>
                 </Card.Body>
             </Card>
