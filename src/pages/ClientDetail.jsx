@@ -5,7 +5,8 @@
 //   - 保留圖片上傳（ChartImage）顯示於生成星盤下方
 //   - 載入時新增呼叫 GET /api/chart/{id}/data 與 GET /api/chart/preferences
 //   - 加入 ChartSettings 設定面板
-// 星盤優化 V2 — FE-9
+//   - v9 fix：ASC/MC 改由 GET /api/clients/{id} 的 client 物件取得，
+//             不再依賴 V2 chartData（避免 V2 端點未就緒時資訊消失）
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -35,7 +36,7 @@ export default function ClientDetail() {
   const { id }   = useParams();
   const navigate = useNavigate();
 
-  // ── 客戶基本資訊 ─────────────────────────────
+  // ── 客戶基本資訊（含 v9 ASC/MC 欄位）────────
   const [client,  setClient]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
@@ -47,7 +48,7 @@ export default function ClientDetail() {
   const [selected,     setSelected]     = useState(new Set());
   const [showAI,       setShowAI]       = useState(false);
 
-  // ── 載入客戶基本資訊 ─────────────────────────
+  // ── 載入客戶基本資訊（v9 ASC/MC 隨此一起回傳）
   useEffect(() => {
     (async () => {
       try {
@@ -152,8 +153,8 @@ export default function ClientDetail() {
             )}
           </h4>
           <div className="text-muted" style={{ fontSize: '0.85rem' }}>
-            {client.birthDate && <span className="me-3">🗓 {client.birthDate}</span>}
-            {client.birthTime && <span className="me-3">⏰ {client.birthTime}</span>}
+            {client.birthDate  && <span className="me-3">🗓 {client.birthDate}</span>}
+            {client.birthTime  && <span className="me-3">⏰ {client.birthTime}</span>}
             {client.birthPlace && <span>📍 {client.birthPlace}</span>}
           </div>
         </div>
@@ -173,7 +174,7 @@ export default function ClientDetail() {
       {/* Tabs */}
       <Tabs defaultActiveKey="chart" className="mb-3" mountOnEnter>
 
-        {/* ── Tab 1：命盤資料（V2 修改）────────── */}
+        {/* ── Tab 1：命盤資料 ───────────────────── */}
         <Tab eventKey="chart" title="命盤資料">
           <Row>
             <Col lg={7} className="mb-3">
@@ -213,33 +214,34 @@ export default function ClientDetail() {
             </Col>
 
             <Col lg={5}>
-              {/* 上升 / 天頂資訊 */}
-              {chartData && (
-                <Card className="mb-3 shadow-sm border-0">
-                  <Card.Body style={{ fontSize: '0.85rem' }}>
-                    <Row>
-                      <Col xs={6}>
-                        <div className="text-muted mb-1">上升點 ASC</div>
-                        <div className="fw-semibold">
-                          {chartData.ascendant?.sign ?? '—'}{' '}
-                          {chartData.ascendant
-                            ? `${chartData.ascendant.degreeNum}°${String(chartData.ascendant.minuteNum).padStart(2, '0')}'`
-                            : ''}
-                        </div>
-                      </Col>
-                      <Col xs={6}>
-                        <div className="text-muted mb-1">天頂 MC</div>
-                        <div className="fw-semibold">
-                          {chartData.midheaven?.sign ?? '—'}{' '}
-                          {chartData.midheaven
-                            ? `${chartData.midheaven.degreeNum}°${String(chartData.midheaven.minuteNum).padStart(2, '0')}'`
-                            : ''}
-                        </div>
-                      </Col>
-                    </Row>
-                  </Card.Body>
-                </Card>
-              )}
+              {/*
+               * v9 fix：上升 / 天頂資訊
+               * 資料來源改為 GET /api/clients/{id} 回傳的 client 物件
+               * （ascSign / ascDegreeNum / ascMinuteNum / mcSign / mcDegreeNum / mcMinuteNum）
+               * 欄位為 null 時顯示「尚未設定」
+               */}
+              <Card className="mb-3 shadow-sm border-0">
+                <Card.Body style={{ fontSize: '0.85rem' }}>
+                  <Row>
+                    <Col xs={6}>
+                      <div className="text-muted mb-1">上升點 ASC</div>
+                      <div className="fw-semibold">
+                        {client.ascSign
+                          ? `${client.ascSign} ${client.ascDegreeNum ?? 0}°${String(client.ascMinuteNum ?? 0).padStart(2, '0')}'`
+                          : '尚未設定'}
+                      </div>
+                    </Col>
+                    <Col xs={6}>
+                      <div className="text-muted mb-1">天頂 MC</div>
+                      <div className="fw-semibold">
+                        {client.mcSign
+                          ? `${client.mcSign} ${client.mcDegreeNum ?? 0}°${String(client.mcMinuteNum ?? 0).padStart(2, '0')}'`
+                          : '尚未設定'}
+                      </div>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
 
               {/* 行星列表摘要 */}
               <PlanetTable clientId={id} />
