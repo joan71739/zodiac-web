@@ -5,6 +5,10 @@ import { exportLogs } from '../api/export'
 
 const emptyForm = { consultationDate: '', notes: '' }
 
+// 依 consultationDate 降序排序（與後端 findByClientIdOrderByConsultationDateDesc 一致）
+const sortByDateDesc = (list) =>
+    [...list].sort((a, b) => new Date(b.consultationDate) - new Date(a.consultationDate))
+
 function ConsultationLog({ clientId }) {
     const [logs, setLogs] = useState([])
     const [loading, setLoading] = useState(true)
@@ -34,7 +38,9 @@ function ConsultationLog({ clientId }) {
         try {
             setSaving(true)
             const res = await createLog(clientId, form)
-            setLogs([res.data, ...logs])
+            // FIX：prepend 後重新依 consultationDate 降序排序，
+            // 避免補記舊日期時畫面順序與後端不一致
+            setLogs(prev => sortByDateDesc([res.data, ...prev]))
             setForm(emptyForm)
             setShowForm(false)
         } catch (err) {
@@ -56,7 +62,8 @@ function ConsultationLog({ clientId }) {
         try {
             setSaving(true)
             const res = await updateLog(clientId, editingId, editForm)
-            setLogs(logs.map(l => l.id === editingId ? res.data : l))
+            // FIX：編輯後同樣重新排序，consultationDate 被改動時順序也能正確更新
+            setLogs(prev => sortByDateDesc(prev.map(l => l.id === editingId ? res.data : l)))
             setEditingId(null)
         } catch (err) {
             setErrorMsg('編輯諮詢記錄失敗')
