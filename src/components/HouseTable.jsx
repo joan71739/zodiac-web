@@ -58,6 +58,7 @@ function HouseTable({ clientId }) {
     }
 
     // 初次建立：POST 整批 12 筆
+    // BUG FIX：改用 merge 模式，確保 JPA saveAll 回傳順序不影響 UI 宮位排序
     const handleCreateAll = async () => {
         try {
             setSavingIndex('all')
@@ -68,7 +69,12 @@ function HouseTable({ clientId }) {
                 fliesToHouse: h.fliesToHouse !== '' ? parseInt(h.fliesToHouse) : null
             }))
             const res = await createHouses(clientId, payload)
-            setHouses(res.data)
+            // merge by houseNumber，確保 1~12 宮固定順序，不受 JPA saveAll 回傳順序影響
+            const merged = defaultRows().map(def => {
+                const found = res.data.find(h => h.houseNumber === def.houseNumber)
+                return found ? { ...def, ...found } : def
+            })
+            setHouses(merged)
         } catch (err) {
             setErrorMsg('建立宮位資料失敗')
         } finally {
@@ -114,7 +120,8 @@ function HouseTable({ clientId }) {
                         onClick={handleCreateAll}
                         disabled={savingIndex === 'all'}
                     >
-                        {savingIndex === 'all' ? <Spinner animation="border" size="sm" /> : '初次建立全部'}
+                        {savingIndex === 'all'
+                            ? <Spinner animation="border" size="sm" /> : '初次建立全部'}
                     </Button>
                 )}
             </div>
@@ -176,7 +183,9 @@ function HouseTable({ clientId }) {
                                             onClick={() => handleSaveRow(index)}
                                             disabled={savingIndex === index}
                                         >
-                                            {savingIndex === index ? <Spinner animation="border" size="sm" /> : '儲存'}
+                                            {savingIndex === index
+                                                ? <Spinner animation="border" size="sm" />
+                                                : '儲存'}
                                         </Button>
                                     )}
                                 </td>
