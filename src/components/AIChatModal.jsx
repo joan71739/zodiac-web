@@ -9,13 +9,12 @@ function AIChatModal({ show, onHide, noteTitle, noteContent }) {
     const [errorMsg, setErrorMsg] = useState('')
     const bottomRef = useRef(null)
 
-    // Modal 每次開啟時清空對話
+    // Fix #6：show 變化時不論開啟或關閉都清空對話
+    // 關閉時立刻清空 → 下次開啟前已是乾淨狀態，避免 Modal 動畫期間閃爍舊訊息
     useEffect(() => {
-        if (show) {
-            setMessages([])
-            setInput('')
-            setErrorMsg('')
-        }
+        setMessages([])
+        setInput('')
+        setErrorMsg('')
     }, [show])
 
     // 自動捲到最新訊息
