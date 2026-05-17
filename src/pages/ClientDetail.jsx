@@ -7,6 +7,10 @@
 //   - 加入 ChartSettings 設定面板
 //   - v9 fix：ASC/MC 改由 GET /api/clients/{id} 的 client 物件取得，
 //             不再依賴 V2 chartData（避免 V2 端點未就緒時資訊消失）
+//   - #7 fix：補上 exportChart import + handleExportChart + 匯出命盤按鈕
+//   - #5 fix：AIChatModal 在 ClientDetail 呼叫時 props 錯誤（clientId/clientName
+//             皆為 AIChatModal 未定義的 prop，靜默忽略），
+//             改用正確的 noteTitle/noteContent 並傳入客戶基本資料作為 AI 背景 context
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -119,7 +123,7 @@ export default function ClientDetail() {
     }
   }
 
-  // 2. handler 補上（handleDelete 之後）
+  // ── 匯出命盤（#7 fix）────────────────────────
   async function handleExportChart() {
     try {
       await exportChart(id);
@@ -127,6 +131,24 @@ export default function ClientDetail() {
       alert('匯出命盤失敗，請稍後再試。');
     }
   }
+
+  // ── AI 背景 context 組裝（#5 fix）────────────
+  // AIChatModal 的 prop 是 noteTitle / noteContent，
+  // 從 ClientDetail 發起時以客戶基本資料作為背景 context，
+  // 傳入後端 buildSystemPrompt() 的「當前解析背景」欄位，
+  // 讓 AI 能正確識別正在討論哪位客戶的命盤。
+  // 生日：1993-08-10，出生時間：08:30，出生地：台北，上升點：天秤座 22°01'，天頂：巨蟹座 22°35'
+  const buildAiContext = (c) => {
+    return [
+      c.birthDate && `生日：${c.birthDate}`,
+      c.birthTime && `出生時間：${c.birthTime}`,
+      c.birthPlace && `出生地：${c.birthPlace}`,
+      c.ascSign
+      && `上升點：${c.ascSign} ${c.ascDegreeNum ?? 0}°${String(c.ascMinuteNum ?? 0).padStart(2, '0')}'`,
+      c.mcSign
+      && `天頂：${c.mcSign} ${c.mcDegreeNum ?? 0}°${String(c.mcMinuteNum ?? 0).padStart(2, '0')}'`,
+    ].filter(Boolean).join('，');
+  };
 
   // ────────────────────────────────────────────
   // 渲染
@@ -175,6 +197,7 @@ export default function ClientDetail() {
           <Button variant="outline-danger" size="sm" onClick={handleDelete}>
             刪除
           </Button>
+          {/* #7 fix：匯出命盤按鈕 */}
           <Button variant="outline-success" size="sm" onClick={handleExportChart}>
             ⬇ 匯出命盤
           </Button>
@@ -230,7 +253,6 @@ export default function ClientDetail() {
               {/*
                * v9 fix：上升 / 天頂資訊
                * 資料來源改為 GET /api/clients/{id} 回傳的 client 物件
-               * （ascSign / ascDegreeNum / ascMinuteNum / mcSign / mcDegreeNum / mcMinuteNum）
                * 欄位為 null 時顯示「尚未設定」
                */}
               <Card className="mb-3 shadow-sm border-0">
@@ -283,12 +305,18 @@ export default function ClientDetail() {
         </Tab>
       </Tabs>
 
-      {/* AI 解析 Modal */}
+      {/*
+       * AI 解析 Modal
+       * #5 fix：原本錯誤傳入 clientId / clientName（AIChatModal 未定義的 props，
+       *         React 靜默忽略），導致 AI 拿不到任何客戶背景。
+       *         修正：noteTitle = 客戶姓名，noteContent = 生日/出生地/ASC/MC 摘要，
+       *         讓 AI system prompt 的「當前解析背景」欄位有意義的客戶資訊。
+       */}
       <AIChatModal
         show={showAI}
         onHide={() => setShowAI(false)}
-        clientId={id}
-        clientName={client.name}
+        noteTitle={client.name}
+        noteContent={buildAiContext(client)}
       />
     </Container>
   );
