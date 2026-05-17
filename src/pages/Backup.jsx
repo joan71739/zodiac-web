@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, Button, Table, Alert, Spinner, Badge } from 'react-bootstrap'
 import { getBackupList, createBackup, restoreBackup } from '../api/backup'
 
@@ -9,13 +9,25 @@ function Backup() {
     const [restoringId, setRestoringId] = useState(null)
     const [errorMsg, setErrorMsg] = useState('')
     const [successMsg, setSuccessMsg] = useState('')
-    const [refreshTimer, setRefreshTimer] = useState(null)
+
+    /**
+     * 改用 useRef 儲存計時器 ID，取代原本的 useState。
+     *
+     * 原因：useEffect 的 cleanup 函數在 [] dependency 下只建立一次，
+     * 閉包捕獲的 state 值永遠是 mount 時的初始值（null）。
+     * 使用 useState 時，cleanup 內的 refreshTimer 永遠是 null，
+     * 組件 unmount 時計時器無法被清除，8 秒後仍會對已 unmount 的組件呼叫 setState。
+     *
+     * useRef 的值存在 .current 屬性，cleanup 讀取的是 ref 物件本身（不是 state 快照），
+     * 所以能拿到最新的 timer ID，確保 unmount 時正確清除。
+     */
+    const refreshTimerRef = useRef(null)
 
     useEffect(() => {
         fetchBackups()
-        // 離開頁面時清除計時器，避免 setState on unmounted component
+        // 離開頁面時清除計時器，避免對已 unmount 的組件呼叫 setState
         return () => {
-            if (refreshTimer) clearTimeout(refreshTimer)
+            if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
         }
     }, [])
 
@@ -34,11 +46,13 @@ function Backup() {
     /**
      * 手動觸發備份
      *
-     * 後端是真正的非同步（非同步 Thread 執行 pg_dump），API 立即回傳。
-     * 因此備份完成時間不確定，前端採用兩段策略：
-     *   1. 顯示含「立即重新整理」按鈕的提示，讓使用者可手動確認結果
-     *   2. 同時設定 8 秒後自動 fetchBackups（對小型 DB 的友善 UX）
-     * 若後端回傳 409（備份進行中），顯示專屬提示訊息。
+     * 後端是真正的非同步（Thread 執行 pg_dump，API 立即回傳），
+     * 備份何時完成前端無法得知，採用兩段策略：
+     *   1. 顯示含「立即重新整理」按鈕的提示，讓使用者可手動確認
+     *   2. 同時設定 8 秒後自動 fetchBackups（小型 DB 的友善 UX）
+     *
+     * 409（備份進行中）由後端 AtomicBoolean 防重複觸發；
+     * axios 預設把 4xx 拋為 error，統一在 catch 處理，不需在 try 區塊判斷 res.status。
      */
     const handleBackup = async () => {
         if (!window.confirm('確定要立即執行備份？')) return
@@ -46,26 +60,19 @@ function Backup() {
             setBackingUp(true)
             setErrorMsg('')
             setSuccessMsg('')
-            const res = await createBackup()
-
-            // 後端回傳 409：備份進行中（AtomicBoolean lock）
-            if (res.status === 409) {
-                setErrorMsg('備份進行中，請稍後再試')
-                return
-            }
+            await createBackup()
 
             setSuccessMsg('backup_started')
 
-            // 8 秒後自動重新整理（較保守的等待時間，應對稍大的 DB）
-            const timer = setTimeout(async () => {
+            // 8 秒後自動重新整理；ref 確保 unmount 時 cleanup 能正確清除
+            refreshTimerRef.current = setTimeout(async () => {
                 await fetchBackups()
                 setSuccessMsg('')
-                setRefreshTimer(null)
+                refreshTimerRef.current = null
             }, 8000)
-            setRefreshTimer(timer)
 
         } catch (err) {
-            // axios 對 4xx/5xx 會進 catch；409 若未特殊設定也可能到這裡
+            // axios 對 4xx/5xx 拋 error，409 與其他錯誤在此分流
             if (err.response?.status === 409) {
                 setErrorMsg('備份進行中，請稍後再試')
             } else {
@@ -76,11 +83,11 @@ function Backup() {
         }
     }
 
-    /** 手動立即重新整理（配合 successMsg 按鈕使用） */
+    /** 手動立即重新整理（配合「立即重新整理」按鈕使用） */
     const handleManualRefresh = async () => {
-        if (refreshTimer) {
-            clearTimeout(refreshTimer)
-            setRefreshTimer(null)
+        if (refreshTimerRef.current) {
+            clearTimeout(refreshTimerRef.current)
+            refreshTimerRef.current = null
         }
         setSuccessMsg('')
         await fetchBackups()
