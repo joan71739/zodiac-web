@@ -16,37 +16,38 @@ import {
   Spinner, Alert, Badge,
 } from 'react-bootstrap';
 import axios from 'axios';
+import { exportChart } from '../api/export';
 
 // V2 新增 imports
-import NatalChartSVG  from '../components/NatalChartSVG';
-import ChartSettings  from '../components/ChartSettings';
+import NatalChartSVG from '../components/NatalChartSVG';
+import ChartSettings from '../components/ChartSettings';
 import { getChartData, getPreferences, savePreferences, resetPreferences } from '../api/chart';
 import { DEFAULT_PREFERENCES } from '../utils/chartMath';
 
 // v8 既有 components（保留）
-import ChartImage        from '../components/ChartImage';
-import PlanetTable       from '../components/PlanetTable';
-import HouseTable        from '../components/HouseTable';
-import AspectTable       from '../components/AspectTable';
-import AnalysisBlock     from '../components/AnalysisBlock';
-import ConsultationLog   from '../components/ConsultationLog';
-import AIChatModal       from '../components/AIChatModal';
+import ChartImage from '../components/ChartImage';
+import PlanetTable from '../components/PlanetTable';
+import HouseTable from '../components/HouseTable';
+import AspectTable from '../components/AspectTable';
+import AnalysisBlock from '../components/AnalysisBlock';
+import ConsultationLog from '../components/ConsultationLog';
+import AIChatModal from '../components/AIChatModal';
 
 export default function ClientDetail() {
-  const { id }   = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
 
   // ── 客戶基本資訊（含 v9 ASC/MC 欄位）────────
-  const [client,  setClient]  = useState(null);
+  const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
 
   // ── V2：星盤資料 + 設定 ──────────────────────
-  const [chartData,    setChartData]    = useState(null);
+  const [chartData, setChartData] = useState(null);
   const [chartLoading, setChartLoading] = useState(false);
-  const [preferences,  setPreferences]  = useState(DEFAULT_PREFERENCES);
-  const [selected,     setSelected]     = useState(new Set());
-  const [showAI,       setShowAI]       = useState(false);
+  const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
+  const [selected, setSelected] = useState(new Set());
+  const [showAI, setShowAI] = useState(false);
 
   // ── 載入客戶基本資訊（v9 ASC/MC 隨此一起回傳）
   useEffect(() => {
@@ -118,6 +119,15 @@ export default function ClientDetail() {
     }
   }
 
+  // 2. handler 補上（handleDelete 之後）
+  async function handleExportChart() {
+    try {
+      await exportChart(id);
+    } catch (e) {
+      alert('匯出命盤失敗，請稍後再試。');
+    }
+  }
+
   // ────────────────────────────────────────────
   // 渲染
   // ────────────────────────────────────────────
@@ -153,8 +163,8 @@ export default function ClientDetail() {
             )}
           </h4>
           <div className="text-muted" style={{ fontSize: '0.85rem' }}>
-            {client.birthDate  && <span className="me-3">🗓 {client.birthDate}</span>}
-            {client.birthTime  && <span className="me-3">⏰ {client.birthTime}</span>}
+            {client.birthDate && <span className="me-3">🗓 {client.birthDate}</span>}
+            {client.birthTime && <span className="me-3">⏰ {client.birthTime}</span>}
             {client.birthPlace && <span>📍 {client.birthPlace}</span>}
           </div>
         </div>
@@ -164,6 +174,9 @@ export default function ClientDetail() {
           </Button>
           <Button variant="outline-danger" size="sm" onClick={handleDelete}>
             刪除
+          </Button>
+          <Button variant="outline-success" size="sm" onClick={handleExportChart}>
+            ⬇ 匯出命盤
           </Button>
           <Button variant="outline-secondary" size="sm" onClick={() => setShowAI(true)}>
             🤖 AI 解析
