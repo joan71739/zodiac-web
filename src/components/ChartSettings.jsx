@@ -1,15 +1,28 @@
 // ============================================================
-// ChartSettings.jsx — 相位與行星設定面板（F3、F4）
-// 星盤優化 V2 — FE-2
+// ChartSettings.jsx — 星盤設定面板（F3、F4）
+// 修改說明（V2-F5 fix）：
+//   方案 A — 改用 handleToggleOpen()：
+//     展開面板時（open: false → true）重新同步 local state 為目前已儲存的 preferences。
+//     關閉面板時（open: true → false）不做任何處理（未儲存修改自動丟棄）。
+//   UX 語意：設定面板每次展開都是「從目前已儲存狀態開始編輯」，無需 cancel 按鈕。
+//   原本 useEffect([preferences]) 保留，負責 save / reset 後同步外部 preferences 到 local。
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
 import {
-  Collapse, Card, Button, Form, Table, Tab, Tabs, Badge, OverlayTrigger, Tooltip
+  Button, Collapse, Card, Tabs, Tab, Table,
+  Form, Badge,
 } from 'react-bootstrap';
-import { ASPECT_DEFINITIONS, PLANET_DEFINITIONS, DEFAULT_PREFERENCES } from '../utils/chartMath';
+import {
+  ASPECT_DEFINITIONS,
+  PLANET_DEFINITIONS,
+} from '../utils/chartMath';
 
-// 主要行星（有個別容許度）
+// ── 相位分組 ────────────────────────────────────────────────────────────────
+const MAJOR_ASPECTS = ['conjunction', 'sextile', 'square', 'trine', 'opposition'];
+const MINOR_ASPECTS = ['semiSextile', 'semiSquare', 'quintile', 'sesquiquadrate', 'quincunx'];
+
+// ── 行星分組 ────────────────────────────────────────────────────────────────
 const MAJOR_PLANETS = [
   { name: '太陽', key: 'sun' },
   { name: '月亮', key: 'moon' },
@@ -20,42 +33,35 @@ const MAJOR_PLANETS = [
   { name: '土星', key: 'saturn' },
 ];
 
-// 外行星 / 軸點（僅顯示開關）
 const OUTER_PLANETS = [
   { name: '天王星', key: 'uranus' },
   { name: '海王星', key: 'neptune' },
   { name: '冥王星', key: 'pluto' },
-  { name: '上升',   key: 'asc'    },
-  { name: '天頂',   key: 'mc'     },
+  { name: '上升點', key: 'asc' },
+  { name: '天頂',   key: 'mc' },
 ];
 
-// 小天體（預設關）
 const MINOR_BODIES = [
-  { name: '凱龍',   key: 'chiron'     },
-  { name: '穀神',   key: 'ceres'      },
-  { name: '智神',   key: 'pallas'     },
-  { name: '婚神',   key: 'juno'       },
-  { name: '灶神',   key: 'vesta'      },
-  { name: '北交',   key: 'northNode'  },
-  { name: '南交',   key: 'southNode'  },
-  { name: '莉莉絲', key: 'lilith'     },
-  { name: '福點',   key: 'pof'        },
-  { name: '宿命',   key: 'vertex'     },
-  { name: '東昇',   key: 'eastPoint'  },
-  { name: '下降',   key: 'dsc'        },
-  { name: '天底',   key: 'ic'         },
+  { name: '凱龍星', key: 'chiron' },
+  { name: '穀神星', key: 'ceres' },
+  { name: '智神星', key: 'pallas' },
+  { name: '婚神星', key: 'juno' },
+  { name: '灶神星', key: 'vesta' },
+  { name: '北交點', key: 'northNode' },
+  { name: '南交點', key: 'southNode' },
+  { name: '莉莉絲', key: 'lilith' },
+  { name: '幸運點', key: 'pof' },
+  { name: '宿命點', key: 'vertex' },
+  { name: '東昇點', key: 'eastPoint' },
+  { name: '下降點', key: 'dsc' },
+  { name: '天底',   key: 'ic' },
 ];
-
-// 主要相位
-const MAJOR_ASPECTS = ['conjunction', 'sextile', 'square', 'trine', 'opposition'];
-// 次要相位
-const MINOR_ASPECTS = ['semiSextile', 'semiSquare', 'quintile', 'sesquiquadrate', 'quincunx'];
 
 /**
  * Props:
- *  preferences   — 目前設定值（從 GET /api/chart/preferences 取得）
- *  onSave        — (updatedPrefs) => void
- *  onReset       — () => void
+ *  preferences   — 外部已儲存的設定（來自 ClientDetail 的 state）
+ *  onSave        — (updatedPrefs) => Promise<void>
+ *  onReset       — () => Promise<void>
  */
 export default function ChartSettings({ preferences, onSave, onReset }) {
   const [open, setOpen] = useState(false);
@@ -63,14 +69,25 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
   const [saving, setSaving] = useState(false);
   const [showMinorAspects, setShowMinorAspects] = useState(false);
 
-  // 當外部 preferences 更新時同步到 local
+  // 當外部 preferences 更新時同步到 local（save / reset 後由父元件觸發）
   useEffect(() => {
     if (preferences) setLocal(JSON.parse(JSON.stringify(preferences)));
   }, [preferences]);
 
+  // ── V2-F5 fix：展開/收合 handler ────────────────────────────────
+  // 方案 A：每次展開時重新同步 local，確保從已儲存狀態開始編輯
+  // 收合時不處理（未儲存修改自動丟棄，符合「面板為臨時編輯區」的 UX 語意）
+  function handleToggleOpen() {
+    if (!open) {
+      // 展開：重新同步 local 為目前已儲存的 preferences
+      if (preferences) setLocal(JSON.parse(JSON.stringify(preferences)));
+    }
+    setOpen((prev) => !prev);
+  }
+
   if (!local) return null;
 
-  // ── Aspect 更新 ─────────────────────────────
+  // ── Aspect 更新 ─────────────────────────────────────────────────
   function updateAspectOrb(key, value) {
     setLocal((prev) => ({
       ...prev,
@@ -95,7 +112,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
     setLocal((prev) => ({ ...prev, strictMode: !prev.strictMode }));
   }
 
-  // ── Planet Orb 更新 ──────────────────────────
+  // ── Planet Orb 更新 ─────────────────────────────────────────────
   function updatePlanetOrb(key, value) {
     setLocal((prev) => ({
       ...prev,
@@ -103,7 +120,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
     }));
   }
 
-  // ── Planet Visibility 更新 ───────────────────
+  // ── Planet Visibility 更新 ──────────────────────────────────────
   function togglePlanetVisibility(key) {
     setLocal((prev) => ({
       ...prev,
@@ -114,7 +131,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
     }));
   }
 
-  // ── 儲存 ─────────────────────────────────────
+  // ── 儲存 ────────────────────────────────────────────────────────
   async function handleSave() {
     setSaving(true);
     try {
@@ -124,7 +141,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
     }
   }
 
-  // ── 還原 ─────────────────────────────────────
+  // ── 還原 ────────────────────────────────────────────────────────
   async function handleReset() {
     setSaving(true);
     try {
@@ -134,7 +151,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
     }
   }
 
-  // ── 相位表格渲染 ─────────────────────────────
+  // ── 相位表格渲染 ─────────────────────────────────────────────────
   function renderAspectRows(keys) {
     return keys.map((key) => {
       const def  = ASPECT_DEFINITIONS[key];
@@ -200,21 +217,20 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
     });
   }
 
-  // ────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
   // 渲染
-  // ────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
   return (
     <div className="mb-3">
-      {/* 齒輪按鈕 */}
+      {/* 齒輪按鈕 — 改用 handleToggleOpen() */}
       <Button
         variant="outline-secondary"
         size="sm"
-        onClick={() => setOpen(!open)}
+        onClick={handleToggleOpen}
         aria-controls="chart-settings-panel"
         aria-expanded={open}
       >
-        ⚙️ 星盤設定
-        {open ? ' ▲' : ' ▼'}
+        ⚙️ 星盤設定 {open ? '▲' : '▼'}
       </Button>
 
       <Collapse in={open}>
@@ -223,7 +239,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
             <Card.Body>
               <Tabs defaultActiveKey="aspects" className="mb-3">
 
-                {/* ── Tab 1：相位設定 ────────────────── */}
+                {/* ── Tab 1：相位設定 ─────────────────── */}
                 <Tab eventKey="aspects" title="相位設定">
                   {/* 嚴謹模式 */}
                   <div className="d-flex align-items-center gap-3 mb-3 p-2 bg-light rounded">
@@ -286,7 +302,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
                   </Collapse>
                 </Tab>
 
-                {/* ── Tab 2：行星設定 ────────────────── */}
+                {/* ── Tab 2：行星設定 ─────────────────── */}
                 <Tab eventKey="planets" title="行星設定">
                   {/* 主要行星 */}
                   <div className="mb-1 fw-semibold" style={{ fontSize: '0.82rem', color: '#555' }}>
@@ -362,7 +378,9 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
                   {/* 小天體 */}
                   <div className="mb-1 fw-semibold" style={{ fontSize: '0.82rem', color: '#555' }}>
                     小天體
-                    <span className="text-muted ms-2" style={{ fontSize: '0.75rem' }}>（資料擴充後生效）</span>
+                    <span className="text-muted ms-2" style={{ fontSize: '0.75rem' }}>
+                      （資料擴充後生效）
+                    </span>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
                     {MINOR_BODIES.map(({ name, key }) => {

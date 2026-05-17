@@ -1,6 +1,10 @@
 // ============================================================
 // CompareDetail.jsx — 合盤詳細頁（路由：/compare/:idA/:idB）
 // 星盤優化 V2 — FE-6
+// 修改說明（V2-F5 fix）：
+//   Promise.all → Promise.allSettled
+//   synastry 失敗 → setError（顯示給用戶）
+//   prefs 失敗   → 靜默降級使用 DEFAULT_PREFERENCES（不影響合盤顯示）
 // ============================================================
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -24,17 +28,29 @@ import {
 } from '../utils/chartMath';
 
 // ─── 排序輔助 ────────────────────────────────
+// Bug fix（V2-F5）：crossAspects 的 row 結構為 { pA, pB, aspect }，
+// 排序 key 需支援巢狀存取（如 'pA.planet' / 'aspect.orb'），
+// 改用 accessor 函式取代字串 key，避免 a['pA.planet'] 永遠為 undefined。
 function useSortableTable(initialData, initialKey, initialDir) {
   const [sortKey, setSortKey]   = useState(initialKey);
   const [sortDir, setSortDir]   = useState(initialDir); // 'asc' | 'desc'
 
+  // 定義各 sortKey 對應的取值函式
+  const ACCESSORS = {
+    'pA.planet':  (row) => row.pA?.planet  ?? '',
+    'pB.planet':  (row) => row.pB?.planet  ?? '',
+    'aspect.orb': (row) => row.aspect?.orb ?? 0,
+    'orb':        (row) => row.aspect?.orb ?? 0,  // alias
+  };
+
   const sorted = useMemo(() => {
     if (!initialData || !sortKey) return initialData ?? [];
+    const accessor = ACCESSORS[sortKey] ?? ((row) => row[sortKey]);
     return [...initialData].sort((a, b) => {
-      let va = a[sortKey], vb = b[sortKey];
-      if (typeof va === 'string') va = va.localeCompare(vb);
-      else va = va - vb;
-      return sortDir === 'asc' ? va : -va;
+      const va = accessor(a);
+      const vb = accessor(b);
+      const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+      return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [initialData, sortKey, sortDir]);
 
@@ -66,21 +82,34 @@ export default function CompareDetail() {
   const [outerClient, setOuterClient]     = useState('A');
 
   // 載入資料
+  // V2-F5 fix：Promise.all → Promise.allSettled
+  //   synastry 失敗 → setError（合盤資料是必需的，失敗應顯示錯誤）
+  //   prefs 失敗    → 靜默降級使用 DEFAULT_PREFERENCES（設定非必需）
   useEffect(() => {
     (async () => {
       setLoading(true);
-      try {
-        const [syn, prefs] = await Promise.all([
-          getSynastryData(idA, idB),
-          getPreferences(),
-        ]);
-        setSynastryData(syn);
-        setPreferences(prefs ?? DEFAULT_PREFERENCES);
-      } catch (e) {
+      setError(null);
+
+      const [synResult, prefsResult] = await Promise.allSettled([
+        getSynastryData(idA, idB),
+        getPreferences(),
+      ]);
+
+      if (synResult.status === 'fulfilled') {
+        setSynastryData(synResult.value);
+      } else {
+        console.warn('[CompareDetail] 合盤資料載入失敗', synResult.reason);
         setError('無法載入合盤資料，請稍後再試。');
-      } finally {
-        setLoading(false);
       }
+
+      if (prefsResult.status === 'fulfilled' && prefsResult.value) {
+        setPreferences(prefsResult.value);
+      } else if (prefsResult.status === 'rejected') {
+        // 降級使用 DEFAULT_PREFERENCES（初始值），不影響合盤顯示
+        console.warn('[CompareDetail] 偏好設定載入失敗，使用預設值', prefsResult.reason);
+      }
+
+      setLoading(false);
     })();
   }, [idA, idB]);
 
@@ -94,103 +123,18 @@ export default function CompareDetail() {
     [synastryData]
   );
 
-  // 上升絕對度數（A）
-  const ascADeg = useMemo(
-    () => ascToAbsDeg(synastryData?.clientA?.ascendant),
-    [synastryData]
-  );
+  const ascDegA = useMemo(() => ascToAbsDeg(synastryData?.clientA?.ascendant), [synastryData]);
+  const ascDegB = useMemo(() => ascToAbsDeg(synastryData?.clientB?.ascendant), [synastryData]);
 
-  // ── 第一區塊：B 的行星落入 A 的宮位 ──────────
-  const bInAHouses = useMemo(() => {
-    return planetsB.map((pB) => ({
-      planet:  pB.planet,
-      sign:    pB.sign,
-      degree:  pB.degreeNum,
-      minute:  pB.minuteNum,
-      house:   getHouseForPlanet(pB.absoluteDeg, ascADeg),
-      absDeg:  pB.absoluteDeg,
-    }));
-  }, [planetsB, ascADeg]);
-
-  // ── 第二區塊：共同特徵 ───────────────────────
-  const sharedSign = useMemo(() => {
-    const results = [];
-    for (const pA of planetsA) {
-      for (const pB of planetsB) {
-        if (pA.sign === pB.sign) {
-          results.push({ pA, pB });
-        }
-      }
-    }
-    return results;
-  }, [planetsA, planetsB]);
-
-  const sharedDegree = useMemo(() => {
-    const results = [];
-    for (const pA of planetsA) {
-      for (const pB of planetsB) {
-        if (Math.abs(pA.degreeNum - pB.degreeNum) <= 2) {
-          results.push({ pA, pB, diff: Math.abs(pA.degreeNum - pB.degreeNum) });
-        }
-      }
-    }
-    return results;
-  }, [planetsA, planetsB]);
-
-  const sharedElement = useMemo(() => {
-    const elementMap = {};
-    const getEl = (sign) => getSignElement(sign);
-    for (const pA of planetsA) {
-      const el = getEl(pA.sign);
-      if (el) {
-        if (!elementMap[el]) elementMap[el] = { A: [], B: [] };
-        elementMap[el].A.push(pA);
-      }
-    }
-    for (const pB of planetsB) {
-      const el = getEl(pB.sign);
-      if (el && elementMap[el]) {
-        elementMap[el].B.push(pB);
-      }
-    }
-    return Object.entries(elementMap)
-      .filter(([, { A, B }]) => A.length > 0 && B.length > 0)
-      .map(([element, { A, B }]) => ({ element, A, B }));
-  }, [planetsA, planetsB]);
-
-  // ── 第三區塊：跨相位列表 ─────────────────────
-  const rawCrossAspects = useMemo(
+  // ── 跨相位計算 ───────────────────────────────
+  const crossAspects = useMemo(
     () => calcCrossAspects(planetsA, planetsB, preferences),
     [planetsA, planetsB, preferences]
   );
 
-  // 整理為表格用資料
-  const aspectRows = useMemo(() =>
-    rawCrossAspects.map(({ pA, pB, aspect }) => ({
-      planetA:  pA.planet,
-      signA:    pA.sign,
-      degreeA:  pA.absoluteDeg,
-      degStrA:  formatDegMin(pA.degreeNum, pA.minuteNum),
-      planetB:  pB.planet,
-      signB:    pB.sign,
-      degreeB:  pB.absoluteDeg,
-      degStrB:  formatDegMin(pB.degreeNum, pB.minuteNum),
-      aspectKey: aspect.key,
-      orb:       aspect.orb,
-    })),
-    [rawCrossAspects]
-  );
+  const { sorted, handleSort, SortIcon } = useSortableTable(crossAspects, 'orb', 'asc');
 
-  const { sorted: sortedAspects, handleSort, SortIcon } = useSortableTable(
-    aspectRows, 'orb', 'asc'
-  );
-
-  const nameA = synastryData?.clientA?.name ?? '第一人';
-  const nameB = synastryData?.clientB?.name ?? '第二人';
-
-  // ────────────────────────────────────────────
-  // 渲染
-  // ────────────────────────────────────────────
+  // ── 載入中 ───────────────────────────────────
   if (loading) {
     return (
       <Container className="py-5 text-center">
@@ -200,78 +144,100 @@ export default function CompareDetail() {
     );
   }
 
+  // ── 錯誤（合盤資料載入失敗） ─────────────────
   if (error) {
     return (
       <Container className="py-4">
         <Alert variant="danger">{error}</Alert>
-        <Button variant="secondary" onClick={() => navigate('/compare')}>← 返回</Button>
+        <Button variant="secondary" onClick={() => navigate('/compare')}>← 返回選人頁</Button>
       </Container>
     );
   }
 
+  const nameA = synastryData?.clientA?.name ?? 'A';
+  const nameB = synastryData?.clientB?.name ?? 'B';
+
+  // ── 共同特徵計算 ────────────────────────────
+  const commonSigns = planetsA
+    .filter((pA) => planetsB.some((pB) => pB.sign === pA.sign))
+    .map((p) => `${p.planet}（${p.sign}）`);
+
+  const commonDegrees = planetsA
+    .flatMap((pA) =>
+      planetsB
+        .filter((pB) => Math.abs(pA.absoluteDeg - pB.absoluteDeg) <= 2)
+        .map((pB) => `${pA.planet} ≈ ${pB.planet}（誤差 ${Math.abs(pA.absoluteDeg - pB.absoluteDeg).toFixed(1)}°）`)
+    );
+
+  const elementsA = [...new Set(planetsA.map((p) => getSignElement(p.sign)).filter(Boolean))];
+  const elementsB = [...new Set(planetsB.map((p) => getSignElement(p.sign)).filter(Boolean))];
+  const commonElements = elementsA.filter((el) => elementsB.includes(el));
+
+  // ── 渲染 ─────────────────────────────────────
   return (
     <Container fluid className="py-3 px-4">
-      {/* 頁首 */}
-      <div className="d-flex align-items-center gap-3 mb-3 flex-wrap">
+      {/* 標題 */}
+      <div className="d-flex align-items-center justify-content-between mb-3">
+        <h4 className="mb-0">
+          合盤：{nameA} × {nameB}
+        </h4>
         <Button variant="outline-secondary" size="sm" onClick={() => navigate('/compare')}>
-          ← 返回選人
+          ← 返回選人頁
         </Button>
-        <h5 className="mb-0">
-          <span style={{ color: '#8B6914' }}>{nameA}</span>
-          <span className="text-muted mx-2">⇄</span>
-          <span style={{ color: '#1A3A6B' }}>{nameB}</span>
-        </h5>
-        <Button
-          variant="outline-primary"
-          size="sm"
-          onClick={() => setOuterClient((c) => (c === 'A' ? 'B' : 'A'))}
-        >
-          切換內外圈
-        </Button>
-        <span className="text-muted" style={{ fontSize: '0.82rem' }}>
-          目前外圈：<strong>{outerClient === 'A' ? nameA : nameB}</strong>
-        </span>
       </div>
 
       <Row>
-        {/* 左側：雙輪星盤 */}
-        <Col lg={5} className="mb-4">
-          <SynastrySVG
-            synastryData={synastryData}
-            preferences={preferences}
-            outerClient={outerClient}
-          />
+        {/* ── 雙輪星盤 ─────────────────────────── */}
+        <Col lg={6} className="mb-4">
+          <Card className="border-0 shadow-sm">
+            <Card.Body>
+              <div className="d-flex align-items-center gap-3 mb-2">
+                <span style={{ fontSize: '0.85rem', color: '#555' }}>外圈 / 內圈：</span>
+                <Button
+                  variant={outerClient === 'A' ? 'primary' : 'outline-primary'}
+                  size="sm"
+                  onClick={() => setOuterClient('A')}
+                >
+                  {nameA} 外 / {nameB} 內
+                </Button>
+                <Button
+                  variant={outerClient === 'B' ? 'primary' : 'outline-primary'}
+                  size="sm"
+                  onClick={() => setOuterClient('B')}
+                >
+                  {nameB} 外 / {nameA} 內
+                </Button>
+              </div>
+              <SynastrySVG
+                synastryData={synastryData}
+                preferences={preferences}
+                outerClient={outerClient}
+              />
+            </Card.Body>
+          </Card>
         </Col>
 
-        {/* 右側：分析區塊 */}
-        <Col lg={7}>
-          {/* 第一區塊：B 的行星落入 A 的宮位 */}
-          <Card className="mb-3 shadow-sm border-0">
-            <Card.Header className="fw-semibold bg-light">
-              【第一區塊】{nameB} 的行星落入 {nameA} 的宮位
+        <Col lg={6}>
+          {/* ── B 行星落入 A 宮位 ─────────────────── */}
+          <Card className="border-0 shadow-sm mb-3">
+            <Card.Header style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+              {nameB} 行星落入 {nameA} 宮位
             </Card.Header>
-            <Card.Body className="p-0">
-              <Table size="sm" bordered hover className="mb-0">
+            <Card.Body className="p-2">
+              <Table size="sm" hover className="mb-0">
                 <thead className="table-light">
                   <tr>
                     <th>{nameB} 行星</th>
                     <th>星座 / 度數</th>
-                    <th>落入 {nameA} 宮位</th>
+                    <th>落入 {nameA} 第幾宮</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {bInAHouses.map((row) => (
-                    <tr key={row.planet}>
-                      <td>
-                        <span style={{ marginRight: 4 }}>{getPlanetSymbol(row.planet)}</span>
-                        {row.planet}
-                      </td>
-                      <td>
-                        {row.sign} {formatDegMin(row.degree, row.minute)}
-                      </td>
-                      <td>
-                        <Badge bg="secondary">第 {row.house} 宮</Badge>
-                      </td>
+                  {planetsB.map((pB) => (
+                    <tr key={pB.planet}>
+                      <td>{getPlanetSymbol(pB.planet)} {pB.planet}</td>
+                      <td>{pB.sign} {formatDegMin(pB.degreeNum, pB.minuteNum)}</td>
+                      <td>第 {getHouseForPlanet(pB.absoluteDeg, ascDegA)} 宮</td>
                     </tr>
                   ))}
                 </tbody>
@@ -279,134 +245,80 @@ export default function CompareDetail() {
             </Card.Body>
           </Card>
 
-          {/* 第二區塊：共同特徵 */}
-          <Card className="mb-3 shadow-sm border-0">
-            <Card.Header className="fw-semibold bg-light">
-              【第二區塊】共同特徵
-            </Card.Header>
-            <Card.Body>
-              {/* A. 同星座 */}
+          {/* ── 共同特徵 ──────────────────────────── */}
+          <Card className="border-0 shadow-sm mb-3">
+            <Card.Header style={{ fontSize: '0.9rem', fontWeight: 600 }}>共同特徵</Card.Header>
+            <Card.Body style={{ fontSize: '0.85rem' }}>
               <div className="mb-2">
-                <span className="fw-semibold" style={{ fontSize: '0.85rem' }}>A. 同星座</span>
-                {sharedSign.length === 0 ? (
-                  <span className="text-muted ms-2" style={{ fontSize: '0.82rem' }}>無</span>
-                ) : (
-                  <ul className="mb-0 mt-1" style={{ fontSize: '0.83rem', paddingLeft: '1.2rem' }}>
-                    {sharedSign.map(({ pA, pB }, i) => (
-                      <li key={i}>
-                        {nameA} {getPlanetSymbol(pA.planet)}{pA.planet}（{pA.sign}）× {nameB} {getPlanetSymbol(pB.planet)}{pB.planet}（{pB.sign}）
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <strong>同星座：</strong>
+                {commonSigns.length > 0 ? commonSigns.join('、') : '無'}
               </div>
-
-              {/* B. 同度數 */}
               <div className="mb-2">
-                <span className="fw-semibold" style={{ fontSize: '0.85rem' }}>B. 同度數（誤差 ≤ 2°）</span>
-                {sharedDegree.length === 0 ? (
-                  <span className="text-muted ms-2" style={{ fontSize: '0.82rem' }}>無</span>
-                ) : (
-                  <ul className="mb-0 mt-1" style={{ fontSize: '0.83rem', paddingLeft: '1.2rem' }}>
-                    {sharedDegree.map(({ pA, pB, diff }, i) => (
-                      <li key={i}>
-                        {nameA} {getPlanetSymbol(pA.planet)}{pA.planet}（{pA.sign} {pA.degreeNum}°）≈ {nameB} {getPlanetSymbol(pB.planet)}{pB.planet}（{pB.sign} {pB.degreeNum}°）差 {diff}°
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <strong>同度數（誤差≤2°）：</strong>
+                {commonDegrees.length > 0 ? commonDegrees.join('、') : '無'}
               </div>
-
-              {/* C. 同元素 */}
               <div>
-                <span className="fw-semibold" style={{ fontSize: '0.85rem' }}>C. 同元素</span>
-                {sharedElement.length === 0 ? (
-                  <span className="text-muted ms-2" style={{ fontSize: '0.82rem' }}>無</span>
-                ) : (
-                  <ul className="mb-0 mt-1" style={{ fontSize: '0.83rem', paddingLeft: '1.2rem' }}>
-                    {sharedElement.map(({ element, A, B }, i) => (
-                      <li key={i}>
-                        {element}：
-                        {nameA}（{A.map((p) => getPlanetSymbol(p.planet) + p.planet).join('、')}）× {nameB}（{B.map((p) => getPlanetSymbol(p.planet) + p.planet).join('、')}）
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-
-          {/* 第三區塊：跨相位列表 */}
-          <Card className="shadow-sm border-0">
-            <Card.Header className="fw-semibold bg-light d-flex justify-content-between align-items-center">
-              <span>【第三區塊】跨相位列表（{sortedAspects.length} 個）</span>
-              <span className="text-muted" style={{ fontSize: '0.78rem' }}>預設以 Orb 升序排列</span>
-            </Card.Header>
-            <Card.Body className="p-0" style={{ maxHeight: 420, overflowY: 'auto' }}>
-              <Table size="sm" bordered hover className="mb-0" style={{ fontSize: '0.82rem' }}>
-                <thead className="table-light sticky-top">
-                  <tr>
-                    <th onClick={() => handleSort('planetA')} style={{ cursor: 'pointer' }}>
-                      {nameA} 行星 <SortIcon col="planetA" />
-                    </th>
-                    <th onClick={() => handleSort('signA')} style={{ cursor: 'pointer' }}>
-                      星座 <SortIcon col="signA" />
-                    </th>
-                    <th onClick={() => handleSort('degreeA')} style={{ cursor: 'pointer' }}>
-                      度數 <SortIcon col="degreeA" />
-                    </th>
-                    <th>相位</th>
-                    <th onClick={() => handleSort('planetB')} style={{ cursor: 'pointer' }}>
-                      {nameB} 行星 <SortIcon col="planetB" />
-                    </th>
-                    <th onClick={() => handleSort('signB')} style={{ cursor: 'pointer' }}>
-                      星座 <SortIcon col="signB" />
-                    </th>
-                    <th onClick={() => handleSort('degreeB')} style={{ cursor: 'pointer' }}>
-                      度數 <SortIcon col="degreeB" />
-                    </th>
-                    <th onClick={() => handleSort('orb')} style={{ cursor: 'pointer' }}>
-                      Orb <SortIcon col="orb" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedAspects.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center text-muted py-3">
-                        無符合的跨相位
-                      </td>
-                    </tr>
-                  ) : (
-                    sortedAspects.map((row, i) => (
-                      <tr key={i}>
-                        <td>
-                          {getPlanetSymbol(row.planetA)} {row.planetA}
-                        </td>
-                        <td>{row.signA}</td>
-                        <td>{row.degStrA}</td>
-                        <td>
-                          <ChartAspectBadge
-                            aspectKey={row.aspectKey}
-                            orb={row.orb}
-                            size="sm"
-                          />
-                        </td>
-                        <td>
-                          {getPlanetSymbol(row.planetB)} {row.planetB}
-                        </td>
-                        <td>{row.signB}</td>
-                        <td>{row.degStrB}</td>
-                        <td>{Number(row.orb).toFixed(2)}°</td>
-                      </tr>
+                <strong>共同元素：</strong>
+                {commonElements.length > 0
+                  ? commonElements.map((el) => (
+                      <Badge key={el} bg="secondary" className="me-1">{el}</Badge>
                     ))
-                  )}
-                </tbody>
-              </Table>
+                  : '無'}
+              </div>
             </Card.Body>
           </Card>
         </Col>
       </Row>
+
+      {/* ── 跨相位列表 ────────────────────────────── */}
+      <Card className="border-0 shadow-sm">
+        <Card.Header style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+          跨相位列表（{sorted.length} 條）
+        </Card.Header>
+        <Card.Body className="p-2">
+          <Table size="sm" hover responsive className="mb-0">
+            <thead className="table-light">
+              <tr>
+                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('pA.planet')}>
+                  {nameA} 行星 <SortIcon col="pA.planet" />
+                </th>
+                <th>{nameA} 星座</th>
+                <th>{nameA} 度數</th>
+                <th>相位</th>
+                <th>{nameB} 行星</th>
+                <th>{nameB} 星座</th>
+                <th>{nameB} 度數</th>
+                <th style={{ cursor: 'pointer' }} onClick={() => handleSort('orb')}>
+                  Orb <SortIcon col="orb" />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((row, i) => (
+                <tr key={i}>
+                  <td>{getPlanetSymbol(row.pA.planet)} {row.pA.planet}</td>
+                  <td>{row.pA.sign}</td>
+                  <td>{formatDegMin(row.pA.degreeNum, row.pA.minuteNum)}</td>
+                  <td><ChartAspectBadge aspect={row.aspect} /></td>
+                  <td>{getPlanetSymbol(row.pB.planet)} {row.pB.planet}</td>
+                  <td>{row.pB.sign}</td>
+                  <td>{formatDegMin(row.pB.degreeNum, row.pB.minuteNum)}</td>
+                  <td style={{ fontSize: '0.82rem', color: '#666' }}>
+                    {row.aspect.orb.toFixed(2)}°
+                  </td>
+                </tr>
+              ))}
+              {sorted.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center text-muted py-3">
+                    無符合條件的跨相位
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
     </Container>
   );
 }

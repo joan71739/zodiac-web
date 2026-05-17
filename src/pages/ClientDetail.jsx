@@ -11,6 +11,8 @@
 //   - #5 fix：AIChatModal 在 ClientDetail 呼叫時 props 錯誤（clientId/clientName
 //             皆為 AIChatModal 未定義的 prop，靜默忽略），
 //             改用正確的 noteTitle/noteContent 並傳入客戶基本資料作為 AI 背景 context
+//   - V2-F5 fix：Promise.all → Promise.allSettled，任一失敗不影響另一個請求；
+//               新增 chartError state，載入失敗時顯示 Alert（非靜默 console.warn）
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -49,6 +51,8 @@ export default function ClientDetail() {
   // ── V2：星盤資料 + 設定 ──────────────────────
   const [chartData, setChartData] = useState(null);
   const [chartLoading, setChartLoading] = useState(false);
+  // V2-F5 fix：新增 chartError，失敗時顯示 Alert 而非靜默 console.warn
+  const [chartError, setChartError] = useState(null);
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES);
   const [selected, setSelected] = useState(new Set());
   const [showAI, setShowAI] = useState(false);
@@ -68,22 +72,36 @@ export default function ClientDetail() {
   }, [id]);
 
   // ── V2：載入星盤聚合資料 + 全域設定 ──────────
+  // Bug fix（V2-F5）：
+  //   原本 Promise.all 語意：任一 reject → 整個 Promise reject → 兩者皆丟失。
+  //   改為 Promise.allSettled：每個請求獨立處理，互不影響。
+  //   getChartData 失敗 → chartError 顯示 Alert，星盤 tab 有錯誤提示。
+  //   getPreferences 失敗 → 靜默降級使用 DEFAULT_PREFERENCES，其他 tab 不受影響。
   useEffect(() => {
     (async () => {
       setChartLoading(true);
-      try {
-        const [chart, prefs] = await Promise.all([
-          getChartData(id),
-          getPreferences(),
-        ]);
-        setChartData(chart);
-        if (prefs) setPreferences(prefs);
-      } catch (e) {
-        // 星盤資料載入失敗不阻止其他 tab 運作
-        console.warn('星盤資料載入失敗', e);
-      } finally {
-        setChartLoading(false);
+      setChartError(null);
+
+      const [chartResult, prefsResult] = await Promise.allSettled([
+        getChartData(id),
+        getPreferences(),
+      ]);
+
+      if (chartResult.status === 'fulfilled') {
+        setChartData(chartResult.value);
+      } else {
+        console.warn('[ClientDetail] 星盤資料載入失敗', chartResult.reason);
+        setChartError('星盤資料載入失敗，請重新整理頁面，或確認後端服務是否正常。');
       }
+
+      if (prefsResult.status === 'fulfilled' && prefsResult.value) {
+        setPreferences(prefsResult.value);
+      } else if (prefsResult.status === 'rejected') {
+        // 設定載入失敗：靜默降級，使用前端 DEFAULT_PREFERENCES，不阻斷其他功能
+        console.warn('[ClientDetail] 偏好設定載入失敗，使用預設值', prefsResult.reason);
+      }
+
+      setChartLoading(false);
     })();
   }, [id]);
 
@@ -137,7 +155,6 @@ export default function ClientDetail() {
   // 從 ClientDetail 發起時以客戶基本資料作為背景 context，
   // 傳入後端 buildSystemPrompt() 的「當前解析背景」欄位，
   // 讓 AI 能正確識別正在討論哪位客戶的命盤。
-  // 生日：1993-08-10，出生時間：08:30，出生地：台北，上升點：天秤座 22°01'，天頂：巨蟹座 22°35'
   const buildAiContext = (c) => {
     return [
       c.birthDate && `生日：${c.birthDate}`,
@@ -178,26 +195,32 @@ export default function ClientDetail() {
         <div>
           <h4 className="mb-1">
             {client.name}
-            {client.isLord && (
-              <Badge bg="warning" text="dark" className="ms-2" style={{ fontSize: '0.75rem' }}>
-                ★ 命主星
-              </Badge>
-            )}
           </h4>
           <div className="text-muted" style={{ fontSize: '0.85rem' }}>
             {client.birthDate && <span className="me-3">🗓 {client.birthDate}</span>}
             {client.birthTime && <span className="me-3">⏰ {client.birthTime}</span>}
             {client.birthPlace && <span>📍 {client.birthPlace}</span>}
           </div>
+          {/* v9：ASC / MC 顯示 */}
+          {(client.ascSign || client.mcSign) && (
+            <div className="text-muted mt-1" style={{ fontSize: '0.82rem' }}>
+              {client.ascSign
+                ? `上升：${client.ascSign} ${client.ascDegreeNum ?? 0}°${String(client.ascMinuteNum ?? 0).padStart(2, '0')}'`
+                : '上升：尚未設定'}
+              <span className="mx-3">|</span>
+              {client.mcSign
+                ? `天頂：${client.mcSign} ${client.mcDegreeNum ?? 0}°${String(client.mcMinuteNum ?? 0).padStart(2, '0')}'`
+                : '天頂：尚未設定'}
+            </div>
+          )}
         </div>
-        <div className="d-flex gap-2">
+        <div className="d-flex gap-2 flex-wrap">
           <Button variant="outline-primary" size="sm" as={Link} to={`/clients/${id}/edit`}>
             編輯
           </Button>
           <Button variant="outline-danger" size="sm" onClick={handleDelete}>
             刪除
           </Button>
-          {/* #7 fix：匯出命盤按鈕 */}
           <Button variant="outline-success" size="sm" onClick={handleExportChart}>
             ⬇ 匯出命盤
           </Button>
@@ -221,103 +244,85 @@ export default function ClientDetail() {
                 onReset={handleResetPrefs}
               />
 
-              {/* NatalChartSVG 自動生成星盤 */}
+              {/* 星盤區塊：載入中 / 錯誤 / 正常顯示 */}
               {chartLoading ? (
                 <div className="text-center py-5">
                   <Spinner animation="border" size="sm" className="me-2" />
                   生成星盤中…
                 </div>
+              ) : chartError ? (
+                // V2-F5 fix：星盤載入失敗時顯示 Alert，其他 tab 功能不受影響
+                <Alert variant="warning" className="mb-3">
+                  <Alert.Heading style={{ fontSize: '0.95rem' }}>⚠️ 星盤資料載入失敗</Alert.Heading>
+                  <p className="mb-2" style={{ fontSize: '0.85rem' }}>{chartError}</p>
+                  <Button
+                    variant="outline-warning"
+                    size="sm"
+                    onClick={() => {
+                      setChartError(null);
+                      setChartLoading(true);
+                      Promise.allSettled([getChartData(id), getPreferences()]).then(
+                        ([chartResult, prefsResult]) => {
+                          if (chartResult.status === 'fulfilled') setChartData(chartResult.value);
+                          else setChartError('星盤資料載入失敗，請確認後端服務是否正常。');
+                          if (prefsResult.status === 'fulfilled' && prefsResult.value)
+                            setPreferences(prefsResult.value);
+                          setChartLoading(false);
+                        }
+                      );
+                    }}
+                  >
+                    重新載入
+                  </Button>
+                </Alert>
               ) : chartData ? (
                 <NatalChartSVG
                   chartData={chartData}
                   preferences={preferences}
-                  selected={selected}
+                  selectedPlanets={selected}
                   onPlanetClick={handlePlanetClick}
                 />
-              ) : (
-                <Alert variant="info" className="text-center">
-                  尚未有行星資料，請先在「行星位置」Tab 輸入資料後再查看星盤。
-                </Alert>
-              )}
+              ) : null}
 
-              {/* 備用：圖片上傳（顯示於自動生成星盤下方） */}
+              {/* 星盤圖片（備用，V2 自動生成星盤下方） */}
               <div className="mt-3">
-                <div className="text-muted mb-1" style={{ fontSize: '0.78rem' }}>
-                  備用星盤圖片（手動上傳）
-                </div>
                 <ChartImage clientId={id} />
               </div>
             </Col>
 
-            <Col lg={5}>
-              {/*
-               * v9 fix：上升 / 天頂資訊
-               * 資料來源改為 GET /api/clients/{id} 回傳的 client 物件
-               * 欄位為 null 時顯示「尚未設定」
-               */}
-              <Card className="mb-3 shadow-sm border-0">
-                <Card.Body style={{ fontSize: '0.85rem' }}>
-                  <Row>
-                    <Col xs={6}>
-                      <div className="text-muted mb-1">上升點 ASC</div>
-                      <div className="fw-semibold">
-                        {client.ascSign
-                          ? `${client.ascSign} ${client.ascDegreeNum ?? 0}°${String(client.ascMinuteNum ?? 0).padStart(2, '0')}'`
-                          : '尚未設定'}
-                      </div>
-                    </Col>
-                    <Col xs={6}>
-                      <div className="text-muted mb-1">天頂 MC</div>
-                      <div className="fw-semibold">
-                        {client.mcSign
-                          ? `${client.mcSign} ${client.mcDegreeNum ?? 0}°${String(client.mcMinuteNum ?? 0).padStart(2, '0')}'`
-                          : '尚未設定'}
-                      </div>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-
-              {/* 行星列表摘要 */}
+            <Col lg={5} className="mb-3">
+              {/* 行星位置 */}
               <PlanetTable clientId={id} />
             </Col>
           </Row>
-        </Tab>
 
-        {/* ── Tab 2：宮位守護星 ──────────────── */}
-        <Tab eventKey="houses" title="宮位守護星">
+          {/* 宮位守護星 */}
           <HouseTable clientId={id} />
-        </Tab>
 
-        {/* ── Tab 3：重要相位 ────────────────── */}
-        <Tab eventKey="aspects" title="重要相位">
+          {/* 相位 */}
           <AspectTable clientId={id} />
         </Tab>
 
-        {/* ── Tab 4：解析筆記 ────────────────── */}
-        <Tab eventKey="notes" title="解析筆記">
-          <AnalysisBlock clientId={id} />
+        {/* ── Tab 2：我的解析 ──────────────────── */}
+        <Tab eventKey="analysis" title="我的解析">
+          <AnalysisBlock clientId={id} client={client} />
         </Tab>
 
-        {/* ── Tab 5：諮詢記錄 ────────────────── */}
-        <Tab eventKey="logs" title="諮詢記錄">
+        {/* ── Tab 3：諮詢記錄 ─────────────────── */}
+        <Tab eventKey="log" title="諮詢記錄">
           <ConsultationLog clientId={id} />
         </Tab>
       </Tabs>
 
-      {/*
-       * AI 解析 Modal
-       * #5 fix：原本錯誤傳入 clientId / clientName（AIChatModal 未定義的 props，
-       *         React 靜默忽略），導致 AI 拿不到任何客戶背景。
-       *         修正：noteTitle = 客戶姓名，noteContent = 生日/出生地/ASC/MC 摘要，
-       *         讓 AI system prompt 的「當前解析背景」欄位有意義的客戶資訊。
-       */}
-      <AIChatModal
-        show={showAI}
-        onHide={() => setShowAI(false)}
-        noteTitle={client.name}
-        noteContent={buildAiContext(client)}
-      />
+      {/* AI 對話 Modal（#5 fix：用 noteTitle/noteContent props） */}
+      {showAI && (
+        <AIChatModal
+          show={showAI}
+          onHide={() => setShowAI(false)}
+          noteTitle={client.name}
+          noteContent={buildAiContext(client)}
+        />
+      )}
     </Container>
   );
 }
