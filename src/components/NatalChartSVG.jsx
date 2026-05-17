@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import {
   SIGN_OFFSETS,
   ASPECT_DEFINITIONS,
+  ELEMENT_SIGNS,
   toAbsoluteDeg,
   eclipticToSVGAngle,
   polarToCartesian,
@@ -20,15 +21,15 @@ import {
 } from '../utils/chartMath';
 
 // ── 常數 ──────────────────────────────────────
-const SIZE      = 500;
-const CX        = SIZE / 2;
-const CY        = SIZE / 2;
+const SIZE = 500;
+const CX = SIZE / 2;
+const CY = SIZE / 2;
 const R_ZODIAC_OUT = 230;  // 黃道帶外圓
-const R_ZODIAC_IN  = 192;  // 黃道帶內圓
-const R_PLANET     = 170;  // 行星符號圓
-const R_HOUSE      = 150;  // 宮位線外圓
-const R_ASPECT     = 110;  // 相位線圓
-const R_CENTER     = 40;   // 中心圓
+const R_ZODIAC_IN = 192;  // 黃道帶內圓
+const R_PLANET = 170;  // 行星符號圓
+const R_HOUSE = 150;  // 宮位線外圓
+const R_ASPECT = 110;  // 相位線圓
+const R_CENTER = 40;   // 中心圓
 
 // 星座元素顏色
 const ELEMENT_COLORS = {
@@ -38,12 +39,13 @@ const ELEMENT_COLORS = {
   水象: { bg: '#E8EAF6', text: '#1A237E', border: '#9FA8DA' },
 };
 
-const SIGN_ELEMENTS = {
-  牡羊座: '火象', 獅子座: '火象', 射手座: '火象',
-  金牛座: '土象', 處女座: '土象', 魔羯座: '土象',
-  雙子座: '風象', 天秤座: '風象', 水瓶座: '風象',
-  巨蟹座: '水象', 天蠍座: '水象', 雙魚座: '水象',
-};
+// ELEMENT_SIGNS 格式：{ 火象: ['牡羊座', ...], ... }
+// 反轉為：{ 牡羊座: '火象', ... }
+const SIGN_ELEMENTS = Object.fromEntries(
+  Object.entries(ELEMENT_SIGNS).flatMap(([elem, signs]) =>
+    signs.map((s) => [s, elem])
+  )
+);
 
 const SIGN_SYMBOLS = {
   牡羊座: '♈', 金牛座: '♉', 雙子座: '♊', 巨蟹座: '♋',
@@ -108,18 +110,18 @@ export default function NatalChartSVG({
   function renderZodiacBelt() {
     return SIGNS_ORDER.map((sign) => {
       const startDeg = SIGN_OFFSETS[sign];
-      const endDeg   = startDeg + 30;
+      const endDeg = startDeg + 30;
       const startAngle = eclipticToSVGAngle(startDeg, ascDeg);
-      const endAngle   = eclipticToSVGAngle(endDeg, ascDeg);
+      const endAngle = eclipticToSVGAngle(endDeg, ascDeg);
 
       const element = SIGN_ELEMENTS[sign];
-      const colors  = ELEMENT_COLORS[element] || { bg: '#f5f5f5', text: '#333' };
+      const colors = ELEMENT_COLORS[element] || { bg: '#f5f5f5', text: '#333' };
 
       // 扇形路徑
       const p1 = polarToCartesian(CX, CY, R_ZODIAC_OUT, startAngle);
       const p2 = polarToCartesian(CX, CY, R_ZODIAC_OUT, endAngle);
-      const p3 = polarToCartesian(CX, CY, R_ZODIAC_IN,  endAngle);
-      const p4 = polarToCartesian(CX, CY, R_ZODIAC_IN,  startAngle);
+      const p3 = polarToCartesian(CX, CY, R_ZODIAC_IN, endAngle);
+      const p4 = polarToCartesian(CX, CY, R_ZODIAC_IN, startAngle);
 
       // 大弧旗標（跨越 180° 時為 1）
       const angleDiff = ((endAngle - startAngle) + 2 * Math.PI) % (2 * Math.PI);
@@ -136,7 +138,7 @@ export default function NatalChartSVG({
       // 符號位置（扇形中心）
       const midAngle = (startAngle + endAngle) / 2;
       const symR = (R_ZODIAC_OUT + R_ZODIAC_IN) / 2;
-      const sym  = polarToCartesian(CX, CY, symR, midAngle);
+      const sym = polarToCartesian(CX, CY, symR, midAngle);
 
       return (
         <g key={sign}>
@@ -237,7 +239,7 @@ export default function NatalChartSVG({
   function renderPlanets() {
     return planets.map((p) => {
       const angle = eclipticToSVGAngle(p.absoluteDeg, ascDeg);
-      const pos   = polarToCartesian(CX, CY, R_PLANET, angle);
+      const pos = polarToCartesian(CX, CY, R_PLANET, angle);
       const isSelected = selected.has(p.planet);
       const symbol = getPlanetSymbol(p.planet);
 
@@ -285,8 +287,8 @@ export default function NatalChartSVG({
     const axes = [
       { label: 'ASC', eclipticDeg: ascDeg },
       { label: 'DSC', eclipticDeg: (ascDeg + 180) % 360 },
-      { label: 'MC',  eclipticDeg: chartData.midheaven ? toAbsoluteDeg(chartData.midheaven.sign, chartData.midheaven.degreeNum, chartData.midheaven.minuteNum) : (ascDeg + 90) % 360 },
-      { label: 'IC',  eclipticDeg: chartData.midheaven ? (toAbsoluteDeg(chartData.midheaven.sign, chartData.midheaven.degreeNum, chartData.midheaven.minuteNum) + 180) % 360 : (ascDeg + 270) % 360 },
+      { label: 'MC', eclipticDeg: chartData.midheaven ? toAbsoluteDeg(chartData.midheaven.sign, chartData.midheaven.degreeNum, chartData.midheaven.minuteNum) : (ascDeg + 90) % 360 },
+      { label: 'IC', eclipticDeg: chartData.midheaven ? (toAbsoluteDeg(chartData.midheaven.sign, chartData.midheaven.degreeNum, chartData.midheaven.minuteNum) + 180) % 360 : (ascDeg + 270) % 360 },
     ];
 
     return axes.map(({ label, eclipticDeg }) => {

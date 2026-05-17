@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Button, Collapse, Card, Tabs, Tab, Table,
-  Form, Badge,
+  Form, Badge, Alert
 } from 'react-bootstrap';
 import {
   ASPECT_DEFINITIONS,
@@ -38,7 +38,7 @@ const OUTER_PLANETS = [
   { name: '海王星', key: 'neptune' },
   { name: '冥王星', key: 'pluto' },
   { name: '上升點', key: 'asc' },
-  { name: '天頂',   key: 'mc' },
+  { name: '天頂', key: 'mc' },
 ];
 
 const MINOR_BODIES = [
@@ -54,7 +54,7 @@ const MINOR_BODIES = [
   { name: '宿命點', key: 'vertex' },
   { name: '東昇點', key: 'eastPoint' },
   { name: '下降點', key: 'dsc' },
-  { name: '天底',   key: 'ic' },
+  { name: '天底', key: 'ic' },
 ];
 
 /**
@@ -154,7 +154,7 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
   // ── 相位表格渲染 ─────────────────────────────────────────────────
   function renderAspectRows(keys) {
     return keys.map((key) => {
-      const def  = ASPECT_DEFINITIONS[key];
+      const def = ASPECT_DEFINITIONS[key];
       const pref = local.aspects[key] || { orb: def.defaultOrb, show: def.defaultShow };
       return (
         <tr key={key}>
@@ -258,6 +258,14 @@ export default function ChartSettings({ preferences, onSave, onReset }) {
                       onChange={toggleStrictMode}
                     />
                   </div>
+
+                  {/* ── Patch D：嚴謹模式提示 ── */}
+                  {local.strictMode && (
+                    <Alert variant="warning" className="mb-3 py-2" style={{ fontSize: '0.82rem' }}>
+                      ⚠️ 嚴謹模式已開啟，下方容許度設定<strong>暫時無效</strong>，
+                      改用固定嚴謹容許度（合相 5°、六分 3°、四分 5°、三分 5°、對分 5°，小相位 1°～1.5°）。
+                    </Alert>
+                  )}
 
                   {/* 主要相位 */}
                   <div className="mb-1 fw-semibold" style={{ fontSize: '0.82rem', color: '#555' }}>

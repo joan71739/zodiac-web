@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import {
   SIGN_OFFSETS,
   ASPECT_DEFINITIONS,
-  toAbsoluteDeg,
+  ELEMENT_SIGNS,
   eclipticToSVGAngle,
   polarToCartesian,
   calcCrossAspects,
@@ -19,17 +19,17 @@ import {
 } from '../utils/chartMath';
 
 // ── 常數 ──────────────────────────────────────
-const SIZE         = 520;
-const CX           = SIZE / 2;
-const CY           = SIZE / 2;
+const SIZE = 520;
+const CX = SIZE / 2;
+const CY = SIZE / 2;
 const R_ZODIAC_OUT = 240;
-const R_ZODIAC_IN  = 202;
-const R_PLANET_A   = 180;  // 外圈行星（A）
-const R_HOUSE      = 158;
-const R_ASPECT     = 130;  // 相位線
-const R_SEPARATOR  = 110;  // 內外圈分隔
-const R_PLANET_B   = 88;   // 內圈行星（B）
-const R_CENTER     = 40;
+const R_ZODIAC_IN = 202;
+const R_PLANET_A = 180;  // 外圈行星（A）
+const R_HOUSE = 158;
+const R_ASPECT = 130;  // 相位線
+const R_SEPARATOR = 110;  // 內外圈分隔
+const R_PLANET_B = 88;   // 內圈行星（B）
+const R_CENTER = 40;
 
 const SIGN_SYMBOLS = {
   牡羊座: '♈', 金牛座: '♉', 雙子座: '♊', 巨蟹座: '♋',
@@ -44,12 +44,12 @@ const ELEMENT_COLORS = {
   水象: { bg: '#E8EAF6', border: '#9FA8DA' },
 };
 
-const SIGN_ELEMENTS = {
-  牡羊座: '火象', 獅子座: '火象', 射手座: '火象',
-  金牛座: '土象', 處女座: '土象', 魔羯座: '土象',
-  雙子座: '風象', 天秤座: '風象', 水瓶座: '風象',
-  巨蟹座: '水象', 天蠍座: '水象', 雙魚座: '水象',
-};
+// ── 改後（與 NatalChartSVG 相同寫法）──
+const SIGN_ELEMENTS = Object.fromEntries(
+  Object.entries(ELEMENT_SIGNS).flatMap(([elem, signs]) =>
+    signs.map((s) => [s, elem])
+  )
+);
 
 const SIGNS_ORDER = Object.keys(SIGN_OFFSETS);
 
@@ -98,21 +98,21 @@ export default function SynastrySVG({
   // ── 繪製：黃道帶 ─────────────────────────────
   function renderZodiacBelt() {
     return SIGNS_ORDER.map((sign) => {
-      const startDeg   = SIGN_OFFSETS[sign];
-      const endDeg     = startDeg + 30;
+      const startDeg = SIGN_OFFSETS[sign];
+      const endDeg = startDeg + 30;
       const startAngle = eclipticToSVGAngle(startDeg, ascDeg);
-      const endAngle   = eclipticToSVGAngle(endDeg, ascDeg);
+      const endAngle = eclipticToSVGAngle(endDeg, ascDeg);
 
       const element = SIGN_ELEMENTS[sign];
-      const colors  = ELEMENT_COLORS[element] || { bg: '#f5f5f5', border: '#ddd' };
+      const colors = ELEMENT_COLORS[element] || { bg: '#f5f5f5', border: '#ddd' };
 
       const p1 = polarToCartesian(CX, CY, R_ZODIAC_OUT, startAngle);
       const p2 = polarToCartesian(CX, CY, R_ZODIAC_OUT, endAngle);
-      const p3 = polarToCartesian(CX, CY, R_ZODIAC_IN,  endAngle);
-      const p4 = polarToCartesian(CX, CY, R_ZODIAC_IN,  startAngle);
+      const p3 = polarToCartesian(CX, CY, R_ZODIAC_IN, endAngle);
+      const p4 = polarToCartesian(CX, CY, R_ZODIAC_IN, startAngle);
 
       const angleDiff = ((endAngle - startAngle) + 2 * Math.PI) % (2 * Math.PI);
-      const largeArc  = angleDiff > Math.PI ? 1 : 0;
+      const largeArc = angleDiff > Math.PI ? 1 : 0;
 
       const d = [
         `M ${p1.x} ${p1.y}`,
@@ -123,8 +123,8 @@ export default function SynastrySVG({
       ].join(' ');
 
       const midAngle = (startAngle + endAngle) / 2;
-      const symR     = (R_ZODIAC_OUT + R_ZODIAC_IN) / 2;
-      const sym      = polarToCartesian(CX, CY, symR, midAngle);
+      const symR = (R_ZODIAC_OUT + R_ZODIAC_IN) / 2;
+      const sym = polarToCartesian(CX, CY, symR, midAngle);
 
       return (
         <g key={sign}>
@@ -163,9 +163,9 @@ export default function SynastrySVG({
     return crossAspects.map(({ pA, pB, aspect }, idx) => {
       const angleA = eclipticToSVGAngle(pA.absoluteDeg, ascDeg);
       const angleB = eclipticToSVGAngle(pB.absoluteDeg, ascDeg);
-      const posA   = polarToCartesian(CX, CY, R_ASPECT, angleA);
-      const posB   = polarToCartesian(CX, CY, R_ASPECT, angleB);
-      const def    = ASPECT_DEFINITIONS[aspect.key];
+      const posA = polarToCartesian(CX, CY, R_ASPECT, angleA);
+      const posB = polarToCartesian(CX, CY, R_ASPECT, angleB);
+      const def = ASPECT_DEFINITIONS[aspect.key];
       return (
         <line
           key={idx}
@@ -183,8 +183,8 @@ export default function SynastrySVG({
   // ── 繪製：外圈行星 ───────────────────────────
   function renderOuterPlanets() {
     return planetsOuter.map((p) => {
-      const angle  = eclipticToSVGAngle(p.absoluteDeg, ascDeg);
-      const pos    = polarToCartesian(CX, CY, R_PLANET_A, angle);
+      const angle = eclipticToSVGAngle(p.absoluteDeg, ascDeg);
+      const pos = polarToCartesian(CX, CY, R_PLANET_A, angle);
       const symbol = getPlanetSymbol(p.planet);
       return (
         <g key={`outer-${p.planet}`}>
@@ -201,8 +201,8 @@ export default function SynastrySVG({
   // ── 繪製：內圈行星 ───────────────────────────
   function renderInnerPlanets() {
     return planetsInner.map((p) => {
-      const angle  = eclipticToSVGAngle(p.absoluteDeg, ascDeg);
-      const pos    = polarToCartesian(CX, CY, R_PLANET_B, angle);
+      const angle = eclipticToSVGAngle(p.absoluteDeg, ascDeg);
+      const pos = polarToCartesian(CX, CY, R_PLANET_B, angle);
       const symbol = getPlanetSymbol(p.planet);
       return (
         <g key={`inner-${p.planet}`}>

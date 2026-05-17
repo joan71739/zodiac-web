@@ -141,31 +141,31 @@ export const ASPECT_DEFINITIONS = {
 // 3. 行星定義
 // ─────────────────────────────────────────────
 export const PLANET_DEFINITIONS = {
-  太陽:   { key: 'sun',        symbol: '☉',  type: 'major',   hasOrb: true,  defaultOrb: 8, strictOrb: 5, defaultShow: true  },
-  月亮:   { key: 'moon',       symbol: '☽',  type: 'major',   hasOrb: true,  defaultOrb: 8, strictOrb: 5, defaultShow: true  },
-  水星:   { key: 'mercury',    symbol: '☿',  type: 'major',   hasOrb: true,  defaultOrb: 6, strictOrb: 4, defaultShow: true  },
-  金星:   { key: 'venus',      symbol: '♀',  type: 'major',   hasOrb: true,  defaultOrb: 6, strictOrb: 4, defaultShow: true  },
-  火星:   { key: 'mars',       symbol: '♂',  type: 'major',   hasOrb: true,  defaultOrb: 6, strictOrb: 4, defaultShow: true  },
-  木星:   { key: 'jupiter',    symbol: '♃',  type: 'major',   hasOrb: true,  defaultOrb: 5, strictOrb: 3, defaultShow: true  },
-  土星:   { key: 'saturn',     symbol: '♄',  type: 'major',   hasOrb: true,  defaultOrb: 5, strictOrb: 3, defaultShow: true  },
-  天王星: { key: 'uranus',     symbol: '♅',  type: 'outer',   hasOrb: false, defaultShow: true  },
-  海王星: { key: 'neptune',    symbol: '♆',  type: 'outer',   hasOrb: false, defaultShow: true  },
-  冥王星: { key: 'pluto',      symbol: '♇',  type: 'outer',   hasOrb: false, defaultShow: true  },
-  上升:   { key: 'asc',        symbol: 'Asc', type: 'axis',   hasOrb: false, defaultShow: true  },
-  天頂:   { key: 'mc',         symbol: 'MC',  type: 'axis',   hasOrb: false, defaultShow: true  },
-  凱龍:   { key: 'chiron',     symbol: '⚷',  type: 'minor',   hasOrb: false, defaultShow: false },
-  穀神:   { key: 'ceres',      symbol: '⚳',  type: 'minor',   hasOrb: false, defaultShow: false },
-  智神:   { key: 'pallas',     symbol: '⚴',  type: 'minor',   hasOrb: false, defaultShow: false },
-  婚神:   { key: 'juno',       symbol: '⚵',  type: 'minor',   hasOrb: false, defaultShow: false },
-  灶神:   { key: 'vesta',      symbol: '⚶',  type: 'minor',   hasOrb: false, defaultShow: false },
-  北交:   { key: 'northNode',  symbol: '☊',  type: 'minor',   hasOrb: false, defaultShow: false },
-  南交:   { key: 'southNode',  symbol: '☋',  type: 'minor',   hasOrb: false, defaultShow: false },
-  莉莉絲: { key: 'lilith',     symbol: '⚸',  type: 'minor',   hasOrb: false, defaultShow: false },
-  福點:   { key: 'pof',        symbol: '⊗',  type: 'minor',   hasOrb: false, defaultShow: false },
-  宿命:   { key: 'vertex',     symbol: '⊕',  type: 'minor',   hasOrb: false, defaultShow: false },
-  東昇:   { key: 'eastPoint',  symbol: 'EP', type: 'minor',   hasOrb: false, defaultShow: false },
-  下降:   { key: 'dsc',        symbol: 'Dsc', type: 'axis',   hasOrb: false, defaultShow: false },
-  天底:   { key: 'ic',         symbol: 'IC',  type: 'axis',   hasOrb: false, defaultShow: false },
+  太陽: { key: 'sun', symbol: '☉', type: 'major', hasOrb: true, defaultOrb: 8, strictOrb: 5, defaultShow: true },
+  月亮: { key: 'moon', symbol: '☽', type: 'major', hasOrb: true, defaultOrb: 8, strictOrb: 5, defaultShow: true },
+  水星: { key: 'mercury', symbol: '☿', type: 'major', hasOrb: true, defaultOrb: 6, strictOrb: 4, defaultShow: true },
+  金星: { key: 'venus', symbol: '♀', type: 'major', hasOrb: true, defaultOrb: 6, strictOrb: 4, defaultShow: true },
+  火星: { key: 'mars', symbol: '♂', type: 'major', hasOrb: true, defaultOrb: 6, strictOrb: 4, defaultShow: true },
+  木星: { key: 'jupiter', symbol: '♃', type: 'major', hasOrb: true, defaultOrb: 5, strictOrb: 3, defaultShow: true },
+  土星: { key: 'saturn', symbol: '♄', type: 'major', hasOrb: true, defaultOrb: 5, strictOrb: 3, defaultShow: true },
+  天王星: { key: 'uranus', symbol: '♅', type: 'outer', hasOrb: false, defaultShow: true },
+  海王星: { key: 'neptune', symbol: '♆', type: 'outer', hasOrb: false, defaultShow: true },
+  冥王星: { key: 'pluto', symbol: '♇', type: 'outer', hasOrb: false, defaultShow: true },
+  上升: { key: 'asc', symbol: 'Asc', type: 'axis', hasOrb: false, defaultShow: true },
+  天頂: { key: 'mc', symbol: 'MC', type: 'axis', hasOrb: false, defaultShow: true },
+  凱龍: { key: 'chiron', symbol: '⚷', type: 'minor', hasOrb: false, defaultShow: false },
+  穀神: { key: 'ceres', symbol: '⚳', type: 'minor', hasOrb: false, defaultShow: false },
+  智神: { key: 'pallas', symbol: '⚴', type: 'minor', hasOrb: false, defaultShow: false },
+  婚神: { key: 'juno', symbol: '⚵', type: 'minor', hasOrb: false, defaultShow: false },
+  灶神: { key: 'vesta', symbol: '⚶', type: 'minor', hasOrb: false, defaultShow: false },
+  北交: { key: 'northNode', symbol: '☊', type: 'minor', hasOrb: false, defaultShow: false },
+  南交: { key: 'southNode', symbol: '☋', type: 'minor', hasOrb: false, defaultShow: false },
+  莉莉絲: { key: 'lilith', symbol: '⚸', type: 'minor', hasOrb: false, defaultShow: false },
+  福點: { key: 'pof', symbol: '⊗', type: 'minor', hasOrb: false, defaultShow: false },
+  宿命: { key: 'vertex', symbol: '⊕', type: 'minor', hasOrb: false, defaultShow: false },
+  東昇: { key: 'eastPoint', symbol: 'EP', type: 'minor', hasOrb: false, defaultShow: false },
+  下降: { key: 'dsc', symbol: 'Dsc', type: 'axis', hasOrb: false, defaultShow: false },
+  天底: { key: 'ic', symbol: 'IC', type: 'axis', hasOrb: false, defaultShow: false },
 };
 
 // 元素分類
@@ -180,8 +180,11 @@ export const ELEMENT_SIGNS = {
 // 4. 換算行星黃道絕對度數
 // ─────────────────────────────────────────────
 export function toAbsoluteDeg(sign, degreeNum, minuteNum) {
-  const offset = SIGN_OFFSETS[sign] ?? 0;
-  return offset + (degreeNum ?? 0) + (minuteNum ?? 0) / 60;
+  const offset = SIGN_OFFSETS[sign];
+  if (offset === undefined) {
+    console.warn(`[chartMath] toAbsoluteDeg: 未知星座 "${sign}"，fallback 為 0（牡羊座）`);
+  }
+  return (offset ?? 0) + (degreeNum ?? 0) + (minuteNum ?? 0) / 60;
 }
 
 // ─────────────────────────────────────────────
@@ -300,7 +303,10 @@ export function enrichPlanetsWithAbsDeg(planets) {
 // 13. 上升點絕對度數（從 ascendant 物件）
 // ─────────────────────────────────────────────
 export function ascToAbsDeg(ascendant) {
-  if (!ascendant) return 0;
+  if (!ascendant) {
+    console.warn('[chartMath] ascToAbsDeg: ascendant 為 null/undefined，fallback 為 0');
+    return 0;
+  }
   return toAbsoluteDeg(ascendant.sign, ascendant.degreeNum, ascendant.minuteNum);
 }
 
