@@ -1,19 +1,15 @@
 // ============================================================
-// Navbar.jsx — V2 修改版
-// 修改說明：側欄新增「合盤比較」入口，導向 /compare
-// 星盤優化 V2 — FE-11
+// Navbar.jsx — v9 版本（V2 合盤比較入口暫時尚未開發）
+// 修改說明：移除「合盤比較」導覽項目與 V2 badge，更新版本標示
 // ============================================================
 
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Button } from 'react-bootstrap';
 
 const NAV_ITEMS = [
-  { to: '/',        label: '客戶列表', icon: '👥' },
-  { to: '/search',  label: '行星篩選', icon: '🔍' },
-  // V2 新增
-  { to: '/compare', label: '合盤比較', icon: '⚡', badge: 'V2' },
-  { to: '/backup',  label: '備份管理', icon: '💾' },
+  { to: '/',       label: '客戶列表', icon: '👥' },
+  { to: '/search', label: '行星篩選', icon: '🔍' },
+  { to: '/backup', label: '備份管理', icon: '💾' },
 ];
 
 export default function Navbar() {
@@ -82,7 +78,7 @@ export default function Navbar() {
 
       {/* 導覽項目 */}
       <nav style={{ flex: 1, paddingTop: 8 }}>
-        {NAV_ITEMS.map(({ to, label, icon, badge }) => {
+        {NAV_ITEMS.map(({ to, label, icon }) => {
           const isActive = to === '/'
             ? location.pathname === '/'
             : location.pathname.startsWith(to);
@@ -110,28 +106,9 @@ export default function Navbar() {
               }}
             >
               <span style={{ fontSize: '1rem', flexShrink: 0 }}>{icon}</span>
-              {!collapsed && (
-                <>
-                  <span>{label}</span>
-                  {badge && (
-                    <span
-                      style={{
-                        marginLeft: 6,
-                        background: '#D4AF37',
-                        color: '#1C1C2E',
-                        borderRadius: 3,
-                        padding: '1px 5px',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.02em',
-                      }}
-                    >
-                      {badge}
-                    </span>
-                  )}
-                </>
-              )}
-              {/* 收合狀態下的 Tooltip 替代 */}
+              {!collapsed && <span>{label}</span>}
+
+              {/* 收合狀態下的 Tooltip */}
               {collapsed && (
                 <span
                   style={{
@@ -170,7 +147,7 @@ export default function Navbar() {
             letterSpacing: '0.03em',
           }}
         >
-          v8 + 星盤優化 V2
+          v9
         </div>
       )}
 
