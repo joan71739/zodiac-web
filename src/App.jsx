@@ -1,23 +1,18 @@
 // ============================================================
-// App.jsx — V2 修改版
-// 修改說明：新增路由 /compare 與 /compare/:idA/:idB
-// 星盤優化 V2 — FE-10
+// App.jsx — v9 版本（V2 compare 路由暫時尚未開發）
+// 修改說明：移除 CompareSelect / CompareDetail import 與對應路由
 // ============================================================
 
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 
-// 既有頁面（v8）
-import ClientList from './pages/ClientList';
-import ClientForm from './pages/ClientForm';
+// 既有頁面
+import ClientList   from './pages/ClientList';
+import ClientForm   from './pages/ClientForm';
 import ClientDetail from './pages/ClientDetail';
-import Search from './pages/Search';
-import Backup from './pages/Backup';
-
-// V2 新增頁面
-import CompareSelect from './pages/CompareSelect';
-import CompareDetail from './pages/CompareDetail';
+import Search       from './pages/Search';
+import Backup       from './pages/Backup';
 
 export default function App() {
   return (
@@ -28,17 +23,12 @@ export default function App() {
       {/* 主內容區 */}
       <div className="flex-grow-1" style={{ overflowX: 'hidden' }}>
         <Routes>
-          {/* ── 既有路由（v8）─────────────────── */}
-          <Route path="/" element={<ClientList />} />
-          <Route path="/clients/new" element={<ClientForm />} />
-          <Route path="/clients/:id" element={<ClientDetail />} />
-          <Route path="/clients/:id/edit" element={<ClientForm />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/backup" element={<Backup />} />
-
-          {/* ── V2 新增路由 ───────────────────── */}
-          <Route path="/compare" element={<CompareSelect />} />
-          <Route path="/compare/:idA/:idB" element={<CompareDetail />} />
+          <Route path="/"                element={<ClientList />}   />
+          <Route path="/clients/new"     element={<ClientForm />}   />
+          <Route path="/clients/:id"     element={<ClientDetail />} />
+          <Route path="/clients/:id/edit" element={<ClientForm />}  />
+          <Route path="/search"          element={<Search />}       />
+          <Route path="/backup"          element={<Backup />}       />
 
           {/* 404 fallback */}
           <Route path="*" element={
