@@ -147,7 +147,7 @@ export default function Navbar() {
             letterSpacing: '0.03em',
           }}
         >
-          v9
+          v10
         </div>
       )}
 
