@@ -1,10 +1,13 @@
-// ============================================================
-// ClientDetail.jsx — 客戶詳細頁（v10 版本）
-// 修改說明：
-//   - v8：命主星 Badge、AIChatModal（props：noteTitle / noteContent）
-//   - v9：Tab 1 顯示上升點 ASC / 天頂 MC（來自 GET /api/clients/{id}）
-//   - v10：移除 V2（F1～F6）全部 import / state / handler（星盤 SVG 暫未開發）
-// ============================================================
+// ClientDetail.jsx — 客戶詳細頁
+//
+// Tab 結構（規格書 v10）：
+//   Tab 1 命盤資料  — 上升/天頂資訊卡 + 星盤圖片 + 行星 + 宮位 + 相位
+//   Tab 2 我的解析  — AnalysisBlock
+//   Tab 3 諮詢記錄  — ConsultationLog
+//
+// 頁首「🤖 AI 解析」按鈕 → AIChatModal
+//   noteTitle  = 客戶姓名
+//   noteContent = buildAiContext(client) 組裝之基本資料摘要
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -15,25 +18,24 @@ import {
 import axios from 'axios';
 import { exportChart } from '../api/export';
 
-import ChartImage from '../components/ChartImage';
-import PlanetTable from '../components/PlanetTable';
-import HouseTable from '../components/HouseTable';
-import AspectTable from '../components/AspectTable';
-import AnalysisBlock from '../components/AnalysisBlock';
+import ChartImage      from '../components/ChartImage';
+import PlanetTable     from '../components/PlanetTable';
+import HouseTable      from '../components/HouseTable';
+import AspectTable     from '../components/AspectTable';
+import AnalysisBlock   from '../components/AnalysisBlock';
 import ConsultationLog from '../components/ConsultationLog';
-import AIChatModal from '../components/AIChatModal';
+import AIChatModal     from '../components/AIChatModal';
 
 export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // ── 客戶基本資訊（含 v9 ASC/MC 欄位）────────
-  const [client, setClient]   = useState(null);
+  const [client,  setClient]  = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-  const [showAI, setShowAI]   = useState(false);
+  const [error,   setError]   = useState(null);
+  const [showAI,  setShowAI]  = useState(false);
 
-  // ── 載入客戶基本資訊（v9：ASC/MC 隨 GET /api/clients/{id} 一起回傳）
+  // 載入客戶基本資訊（含 ASC/MC 欄位）
   useEffect(() => {
     (async () => {
       try {
@@ -47,7 +49,7 @@ export default function ClientDetail() {
     })();
   }, [id]);
 
-  // ── 刪除客戶 ─────────────────────────────────
+  // 刪除客戶
   async function handleDelete() {
     if (!window.confirm(`確定要刪除「${client?.name}」嗎？此動作無法復原。`)) return;
     try {
@@ -58,7 +60,7 @@ export default function ClientDetail() {
     }
   }
 
-  // ── 匯出命盤 ──────────────────────────────────
+  // 匯出命盤（planets + houses + aspects）
   async function handleExportChart() {
     try {
       await exportChart(id);
@@ -67,9 +69,9 @@ export default function ClientDetail() {
     }
   }
 
-  // ── AI 背景 context 組裝 ──────────────────────
-  // AIChatModal 接受 noteTitle / noteContent；
-  // 從 ClientDetail 發起時，以客戶基本資料組成 context。
+  // 組裝 AI 背景 context
+  // AIChatModal 僅接受 noteTitle / noteContent；
+  // 從客戶詳細頁發起時，以基本資料摘要填入 noteContent。
   function buildAiContext(c) {
     return [
       c.birthDate  && `生日：${c.birthDate}`,
@@ -84,9 +86,7 @@ export default function ClientDetail() {
       .join('\n');
   }
 
-  // ────────────────────────────────────────────
-  // 渲染
-  // ────────────────────────────────────────────
+  // ── 載入中 ───────────────────────────────────
   if (loading) {
     return (
       <Container className="py-5 text-center">
@@ -96,6 +96,7 @@ export default function ClientDetail() {
     );
   }
 
+  // ── 載入失敗 ─────────────────────────────────
   if (error || !client) {
     return (
       <Container className="py-4">
@@ -105,9 +106,11 @@ export default function ClientDetail() {
     );
   }
 
+  // ── 主渲染 ───────────────────────────────────
   return (
     <Container fluid className="py-3 px-4">
-      {/* 頁首：客戶資訊列 */}
+
+      {/* 頁首：客戶資訊 + 操作按鈕 */}
       <div className="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
         <div>
           <h4 className="mb-1">
@@ -140,15 +143,15 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs ── */}
       <Tabs defaultActiveKey="chart" className="mb-3" mountOnEnter>
 
-        {/* ── Tab 1：命盤資料 ───────────────────── */}
+        {/* Tab 1：命盤資料 */}
         <Tab eventKey="chart" title="命盤資料">
           <Row>
             <Col lg={7} className="mb-3">
 
-              {/* v9：上升點 / 天頂資訊卡（資料來源：GET /api/clients/{id}） */}
+              {/* 上升點 / 天頂資訊（來源：GET /api/clients/{id}） */}
               <Card className="mb-3 shadow-sm border-0">
                 <Card.Body style={{ fontSize: '0.85rem' }}>
                   <Row>
@@ -189,18 +192,19 @@ export default function ClientDetail() {
           <AspectTable clientId={id} />
         </Tab>
 
-        {/* ── Tab 2：我的解析 ──────────────────── */}
+        {/* Tab 2：我的解析 */}
         <Tab eventKey="analysis" title="我的解析">
-          <AnalysisBlock clientId={id} client={client} />
+          <AnalysisBlock clientId={id} />
         </Tab>
 
-        {/* ── Tab 3：諮詢記錄 ─────────────────── */}
+        {/* Tab 3：諮詢記錄 */}
         <Tab eventKey="log" title="諮詢記錄">
           <ConsultationLog clientId={id} />
         </Tab>
+
       </Tabs>
 
-      {/* AI 對話 Modal */}
+      {/* AI 諮詢 Modal（noteTitle/noteContent 對應 AIChatModal props 規格） */}
       {showAI && (
         <AIChatModal
           show={showAI}
@@ -209,6 +213,7 @@ export default function ClientDetail() {
           noteContent={buildAiContext(client)}
         />
       )}
+
     </Container>
   );
 }
