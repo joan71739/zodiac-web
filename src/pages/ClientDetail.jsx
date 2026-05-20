@@ -1,4 +1,4 @@
-// ClientDetail.jsx — 客戶詳細頁
+// ClientDetail.jsx — 客戶詳細頁（v10 規格）
 //
 // Tab 結構（規格書 v10）：
 //   Tab 1 命盤資料  — 上升/天頂資訊卡 + 星盤圖片 + 行星 + 宮位 + 相位
@@ -8,6 +8,8 @@
 // 頁首「🤖 AI 解析」按鈕 → AIChatModal
 //   noteTitle  = 客戶姓名
 //   noteContent = buildAiContext(client) 組裝之基本資料摘要
+//
+// V2（F1~F6 星盤優化）：尚未開發，相關 import / state / handler 全數移除
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -35,7 +37,7 @@ export default function ClientDetail() {
   const [error,   setError]   = useState(null);
   const [showAI,  setShowAI]  = useState(false);
 
-  // 載入客戶基本資訊（含 ASC/MC 欄位）
+  // 載入客戶基本資訊（含 ASC/MC 欄位，來源：GET /api/clients/{id}）
   useEffect(() => {
     (async () => {
       try {

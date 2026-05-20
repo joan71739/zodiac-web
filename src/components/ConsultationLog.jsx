@@ -72,11 +72,12 @@ function ConsultationLog({ clientId }) {
         }
     }
 
-    const handleDelete = async (id) => {
+    // FIX：使用 updater function 形式，避免連續操作時 stale closure 造成畫面不同步
+    const handleDelete = async (logId) => {
         if (!window.confirm('確定刪除此諮詢記錄？')) return
         try {
-            await deleteLog(clientId, id)
-            setLogs(logs.filter(l => l.id !== id))
+            await deleteLog(clientId, logId)
+            setLogs(prev => prev.filter(l => l.id !== logId))
         } catch (err) {
             setErrorMsg('刪除諮詢記錄失敗')
         }
