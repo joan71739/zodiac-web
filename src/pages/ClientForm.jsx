@@ -18,7 +18,6 @@ function ClientForm() {
         birthDate: '',
         birthTime: '',
         birthPlace: '',
-        // v9：四軸資訊（選填）
         ascSign: '',
         ascDegreeNum: '',
         ascMinuteNum: '',
@@ -41,7 +40,6 @@ function ClientForm() {
                     birthDate:    c.birthDate   || '',
                     birthTime:    c.birthTime   || '',
                     birthPlace:   c.birthPlace  || '',
-                    // v9：回填四軸資訊（null 時顯示空字串）
                     ascSign:      c.ascSign      ?? '',
                     ascDegreeNum: c.ascDegreeNum != null ? String(c.ascDegreeNum) : '',
                     ascMinuteNum: c.ascMinuteNum != null ? String(c.ascMinuteNum) : '',
@@ -71,13 +69,12 @@ function ClientForm() {
         try {
             setSubmitting(true)
 
-            // 整理 payload：數字欄位空字串 → null，避免後端 Short 轉型錯誤
+            // 數字欄位空字串 → null，避免後端 Integer 轉型錯誤
             const payload = {
-                name:      formData.name.trim(),
-                birthDate: formData.birthDate  || null,
-                birthTime: formData.birthTime  || null,
-                birthPlace: formData.birthPlace || null,
-                // v9：四軸資訊
+                name:         formData.name.trim(),
+                birthDate:    formData.birthDate   || null,
+                birthTime:    formData.birthTime   || null,
+                birthPlace:   formData.birthPlace  || null,
                 ascSign:      formData.ascSign      || null,
                 ascDegreeNum: formData.ascDegreeNum !== '' ? Number(formData.ascDegreeNum) : null,
                 ascMinuteNum: formData.ascMinuteNum !== '' ? Number(formData.ascMinuteNum) : null,
@@ -121,7 +118,6 @@ function ClientForm() {
                 <Card.Body>
                     <Form onSubmit={handleSubmit}>
 
-                        {/* ── 基本資料 ──────────────────────────── */}
                         <Form.Group className="mb-3">
                             <Form.Label>姓名 *</Form.Label>
                             <Form.Control
@@ -164,11 +160,10 @@ function ClientForm() {
                             />
                         </Form.Group>
 
-                        {/* ── v9：四軸資訊（選填）────────────────── */}
+                        {/* ── 四軸資訊（選填）────────────────── */}
                         <hr />
                         <h6 className="mb-3 text-muted">四軸資訊（選填）</h6>
 
-                        {/* 上升點 ASC */}
                         <Form.Label className="fw-semibold">上升點 ASC</Form.Label>
                         <Row className="mb-3 g-2">
                             <Col md={5}>
@@ -207,7 +202,6 @@ function ClientForm() {
                             </Col>
                         </Row>
 
-                        {/* 天頂 MC */}
                         <Form.Label className="fw-semibold">天頂 MC</Form.Label>
                         <Row className="mb-4 g-2">
                             <Col md={5}>
@@ -245,7 +239,6 @@ function ClientForm() {
                                 />
                             </Col>
                         </Row>
-                        {/* ───────────────────────────────────────── */}
 
                         <Button
                             variant="primary"
