@@ -1,15 +1,22 @@
+// ============================================================
 // ClientDetail.jsx — 客戶詳細頁（v10 規格）
+//
+// 修改說明：
+//   - v8：命主星 Badge、AIChatModal（正確 props：noteTitle/noteContent）
+//   - v9：Tab 1 顯示上升點 ASC / 天頂 MC（來源：GET /api/clients/{id}）
+//   - #7 fix：exportChart import + handleExportChart + 匯出命盤按鈕
+//   - #5 fix：AIChatModal props 修正（noteTitle/noteContent + buildAiContext）
+//   - V2（F1～F6）：尚未開發，相關 import / state / handler 全數移除
 //
 // Tab 結構（規格書 v10）：
 //   Tab 1 命盤資料  — 上升/天頂資訊卡 + 星盤圖片 + 行星 + 宮位 + 相位
 //   Tab 2 我的解析  — AnalysisBlock
 //   Tab 3 諮詢記錄  — ConsultationLog
 //
-// 頁首「🤖 AI 解析」按鈕 → AIChatModal
+// AI 諮詢觸發（頁首按鈕）：
 //   noteTitle  = 客戶姓名
 //   noteContent = buildAiContext(client) 組裝之基本資料摘要
-//
-// V2（F1~F6 星盤優化）：尚未開發，相關 import / state / handler 全數移除
+// ============================================================
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -74,6 +81,7 @@ export default function ClientDetail() {
   // 組裝 AI 背景 context
   // AIChatModal 僅接受 noteTitle / noteContent；
   // 從客戶詳細頁發起時，以基本資料摘要填入 noteContent。
+  // null 欄位以 .filter(Boolean) 過濾，不產生空白行。
   function buildAiContext(c) {
     return [
       c.birthDate  && `生日：${c.birthDate}`,
@@ -88,7 +96,7 @@ export default function ClientDetail() {
       .join('\n');
   }
 
-  // ── 載入中 ───────────────────────────────────
+  // ── 渲染 ──────────────────────────────────────
   if (loading) {
     return (
       <Container className="py-5 text-center">
@@ -98,7 +106,6 @@ export default function ClientDetail() {
     );
   }
 
-  // ── 載入失敗 ─────────────────────────────────
   if (error || !client) {
     return (
       <Container className="py-4">
@@ -108,11 +115,10 @@ export default function ClientDetail() {
     );
   }
 
-  // ── 主渲染 ───────────────────────────────────
   return (
     <Container fluid className="py-3 px-4">
 
-      {/* 頁首：客戶資訊 + 操作按鈕 */}
+      {/* 頁首：客戶資訊列 */}
       <div className="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
         <div>
           <h4 className="mb-1">
@@ -145,15 +151,15 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* Tabs */}
       <Tabs defaultActiveKey="chart" className="mb-3" mountOnEnter>
 
-        {/* Tab 1：命盤資料 */}
+        {/* ── Tab 1：命盤資料 ──────────────────────────────────── */}
         <Tab eventKey="chart" title="命盤資料">
           <Row>
             <Col lg={7} className="mb-3">
 
-              {/* 上升點 / 天頂資訊（來源：GET /api/clients/{id}） */}
+              {/* v9：上升點 / 天頂資訊卡（來源：GET /api/clients/{id}） */}
               <Card className="mb-3 shadow-sm border-0">
                 <Card.Body style={{ fontSize: '0.85rem' }}>
                   <Row>
@@ -194,19 +200,20 @@ export default function ClientDetail() {
           <AspectTable clientId={id} />
         </Tab>
 
-        {/* Tab 2：我的解析 */}
+        {/* ── Tab 2：我的解析 ──────────────────────────────────── */}
         <Tab eventKey="analysis" title="我的解析">
           <AnalysisBlock clientId={id} />
         </Tab>
 
-        {/* Tab 3：諮詢記錄 */}
+        {/* ── Tab 3：諮詢記錄 ──────────────────────────────────── */}
         <Tab eventKey="log" title="諮詢記錄">
           <ConsultationLog clientId={id} />
         </Tab>
 
       </Tabs>
 
-      {/* AI 諮詢 Modal（noteTitle/noteContent 對應 AIChatModal props 規格） */}
+      {/* AI 諮詢 Modal（條件渲染：關閉時 unmount 自動清空 state）
+          noteTitle / noteContent 對應 AIChatModal props 規格（#5 fix） */}
       {showAI && (
         <AIChatModal
           show={showAI}

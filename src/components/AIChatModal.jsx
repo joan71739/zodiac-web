@@ -9,8 +9,12 @@ function AIChatModal({ show, onHide, noteTitle, noteContent }) {
     const [errorMsg, setErrorMsg] = useState('')
     const bottomRef = useRef(null)
 
-    // Fix #6：show 變化時不論開啟或關閉都清空對話
-    // 關閉時立刻清空 → 下次開啟前已是乾淨狀態，避免 Modal 動畫期間閃爍舊訊息
+    // 清空對話狀態
+    // 目前呼叫方（AnalysisBlock / ClientDetail）均以條件渲染控制 Modal：
+    //   {showAI && <AIChatModal show={showAI} ...>}
+    // 關閉時元件 unmount，React 自動重置所有 state，此 effect 不會執行。
+    // 保留此 effect 作為防禦性設計：若未來改為常駐 DOM（非條件渲染）模式，
+    // show 切換時仍能確保對話被清空，避免殘留舊訊息。
     useEffect(() => {
         setMessages([])
         setInput('')
@@ -33,7 +37,7 @@ function AIChatModal({ show, onHide, noteTitle, noteContent }) {
         setErrorMsg('')
 
         try {
-            // history = 不含本次訊息的歷史（上一輪的 user/assistant pair）
+            // history = 本輪送出前的所有輪次（不含本次 userMessage）
             const history = messages.map(m => ({ role: m.role, content: m.content }))
 
             const res = await sendAIChat({
@@ -47,7 +51,7 @@ function AIChatModal({ show, onHide, noteTitle, noteContent }) {
             setMessages([...newMessages, { role: 'assistant', content: reply }])
         } catch (err) {
             setErrorMsg('AI 回應失敗，請稍後再試')
-            // 移除剛加入的 user 訊息（讓使用者可以重試）
+            // 移除剛加入的 user 訊息，讓使用者可以重試
             setMessages(messages)
             setInput(userMessage)
         } finally {
@@ -56,6 +60,7 @@ function AIChatModal({ show, onHide, noteTitle, noteContent }) {
     }
 
     const handleKeyDown = (e) => {
+        // Enter 送出；Shift+Enter 換行（textarea 預設行為，不攔截）
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             handleSend()
@@ -68,6 +73,7 @@ function AIChatModal({ show, onHide, noteTitle, noteContent }) {
                 <Modal.Title>🤖 AI 占星顧問助理</Modal.Title>
             </Modal.Header>
             <Modal.Body>
+
                 {noteTitle && (
                     <div className="bg-light rounded p-2 mb-3 small text-muted">
                         <strong>解析背景：</strong>{noteTitle}
@@ -153,6 +159,7 @@ function AIChatModal({ show, onHide, noteTitle, noteContent }) {
                         {loading ? <Spinner animation="border" size="sm" /> : '送出'}
                     </Button>
                 </div>
+
             </Modal.Body>
             <Modal.Footer>
                 <small className="text-muted me-auto">對話於關閉後清除，不做持久化儲存</small>
