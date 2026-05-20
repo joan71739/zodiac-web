@@ -116,7 +116,7 @@ function AnalysisBlock({ clientId }) {
                 <p className="text-muted small">尚無解析，點擊「+ 新增解析」開始建立</p>
             )}
 
-            {/* 解析列表（後端已降序，最新在最上） */}
+            {/* 解析列表（後端已依 sort_order DESC 排序，最新在最上） */}
             {blocks.map(block => (
                 <Card key={block.id} className="mb-3">
                     <Card.Body>

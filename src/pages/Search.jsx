@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { searchClients } from '../api/clients'
 import { exportSearch } from '../api/export'
 
-// v8：命主星保留在下拉選單，後端查詢時會轉換為 is_lord = TRUE
+// 命主星保留在下拉選單，後端查詢時自動轉為 is_lord = TRUE
 const PLANETS = [
     '太陽', '月亮', '水星', '金星', '火星',
     '木星', '土星', '天王星', '海王星', '冥王星', '凱龍星', '命主星'
@@ -116,7 +116,8 @@ function Search() {
                     <Button variant="primary" onClick={handleSearch} disabled={loading}>
                         {loading ? <Spinner animation="border" size="sm" /> : '搜尋'}
                     </Button>
-                    {results !== null && (
+                    {/* 有搜尋結果且不為空時才顯示匯出按鈕，避免匯出空資料造成 UX 歧義 */}
+                    {results !== null && results.length > 0 && (
                         <Button variant="outline-secondary" onClick={handleExport}>
                             匯出
                         </Button>

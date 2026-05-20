@@ -1,12 +1,4 @@
-// ============================================================
-// ClientDetail.jsx — 客戶詳細頁（v10 規格）
-//
-// 修改說明：
-//   - v8：命主星 Badge、AIChatModal（正確 props：noteTitle/noteContent）
-//   - v9：Tab 1 顯示上升點 ASC / 天頂 MC（來源：GET /api/clients/{id}）
-//   - #7 fix：exportChart import + handleExportChart + 匯出命盤按鈕
-//   - #5 fix：AIChatModal props 修正（noteTitle/noteContent + buildAiContext）
-//   - V2（F1～F6）：尚未開發，相關 import / state / handler 全數移除
+// ClientDetail.jsx — 客戶詳細頁
 //
 // Tab 結構（規格書 v10）：
 //   Tab 1 命盤資料  — 上升/天頂資訊卡 + 星盤圖片 + 行星 + 宮位 + 相位
@@ -14,9 +6,8 @@
 //   Tab 3 諮詢記錄  — ConsultationLog
 //
 // AI 諮詢觸發（頁首按鈕）：
-//   noteTitle  = 客戶姓名
+//   noteTitle   = 客戶姓名
 //   noteContent = buildAiContext(client) 組裝之基本資料摘要
-// ============================================================
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -70,16 +61,17 @@ export default function ClientDetail() {
   }
 
   // 匯出命盤（planets + houses + aspects）
+  // 失敗時以 setError 寫入 state，統一由頁面頂部 <Alert> 顯示，與其他元件行為一致
   async function handleExportChart() {
     try {
       await exportChart(id);
     } catch (e) {
-      alert('匯出命盤失敗，請稍後再試。');
+      setError('匯出命盤失敗，請稍後再試。');
     }
   }
 
   // 組裝 AI 背景 context
-  // AIChatModal 僅接受 noteTitle / noteContent；
+  // AIChatModal 接受 noteTitle / noteContent；
   // 從客戶詳細頁發起時，以基本資料摘要填入 noteContent。
   // null 欄位以 .filter(Boolean) 過濾，不產生空白行。
   function buildAiContext(c) {
@@ -151,6 +143,13 @@ export default function ClientDetail() {
         </div>
       </div>
 
+      {/* 匯出命盤失敗訊息 */}
+      {error && (
+        <Alert variant="danger" dismissible onClose={() => setError(null)} className="mb-3">
+          {error}
+        </Alert>
+      )}
+
       {/* Tabs */}
       <Tabs defaultActiveKey="chart" className="mb-3" mountOnEnter>
 
@@ -159,7 +158,7 @@ export default function ClientDetail() {
           <Row>
             <Col lg={7} className="mb-3">
 
-              {/* v9：上升點 / 天頂資訊卡（來源：GET /api/clients/{id}） */}
+              {/* 上升點 / 天頂資訊卡（來源：GET /api/clients/{id}） */}
               <Card className="mb-3 shadow-sm border-0">
                 <Card.Body style={{ fontSize: '0.85rem' }}>
                   <Row>
@@ -213,7 +212,7 @@ export default function ClientDetail() {
       </Tabs>
 
       {/* AI 諮詢 Modal（條件渲染：關閉時 unmount 自動清空 state）
-          noteTitle / noteContent 對應 AIChatModal props 規格（#5 fix） */}
+          noteTitle / noteContent 對應 AIChatModal props 規格 */}
       {showAI && (
         <AIChatModal
           show={showAI}
