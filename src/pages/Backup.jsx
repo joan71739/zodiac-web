@@ -186,13 +186,13 @@ function Backup() {
                                         <td>{b.createdAt?.replace('T', ' ').slice(0, 19)}</td>
                                         <td>
                                             {/*
-                                             * Badge 判斷邏輯：
-                                             *   note 包含「自動」→ secondary（灰，自動備份）
-                                             *   note 不含「自動」、null、空字串 → primary（藍，手動備份）
-                                             * b.note?.includes('自動')：null 時 ?. 回傳 undefined（falsy）
-                                             * {b.note || '手動備份'}：null / '' 時顯示預設文字
+                                             * Badge 判斷邏輯（精確比對）：
+                                             *   note === '自動備份' → secondary（灰）
+                                             *   其他（'手動備份' / null / ''）→ primary（藍）
+                                             * 使用精確比對取代 includes()，避免未來擴充 note 值時誤判。
+                                             * {b.note || '手動備份'}：null / '' 時顯示預設文字。
                                              */}
-                                            <Badge bg={b.note?.includes('自動') ? 'secondary' : 'primary'}>
+                                            <Badge bg={b.note === '自動備份' ? 'secondary' : 'primary'}>
                                                 {b.note || '手動備份'}
                                             </Badge>
                                         </td>

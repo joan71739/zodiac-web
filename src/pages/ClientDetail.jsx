@@ -13,7 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Container, Row, Col, Card, Tabs, Tab, Button,
-  Spinner, Alert, Badge,
+  Spinner, Alert,
 } from 'react-bootstrap';
 import axios from 'axios';
 import { exportChart } from '../api/export';
@@ -61,7 +61,7 @@ export default function ClientDetail() {
   }
 
   // 匯出命盤（planets + houses + aspects）
-  // 失敗時以 setError 寫入 state，統一由頁面頂部 <Alert> 顯示，與其他元件行為一致
+  // 失敗時以 setError 寫入 state，統一由頁面頂部 <Alert> 顯示
   async function handleExportChart() {
     try {
       await exportChart(id);
@@ -70,10 +70,12 @@ export default function ClientDetail() {
     }
   }
 
-  // 組裝 AI 背景 context
-  // AIChatModal 接受 noteTitle / noteContent；
-  // 從客戶詳細頁發起時，以基本資料摘要填入 noteContent。
-  // null 欄位以 .filter(Boolean) 過濾，不產生空白行。
+  /**
+   * 組裝 AI 背景 context
+   * AIChatModal 接受 noteTitle / noteContent；
+   * 從客戶詳細頁發起時，以基本資料摘要填入 noteContent。
+   * null 欄位以 .filter(Boolean) 過濾，不產生空白行。
+   */
   function buildAiContext(c) {
     return [
       c.birthDate  && `生日：${c.birthDate}`,
@@ -83,12 +85,10 @@ export default function ClientDetail() {
         && `上升點：${c.ascSign} ${c.ascDegreeNum ?? 0}°${String(c.ascMinuteNum ?? 0).padStart(2, '0')}'`,
       c.mcSign
         && `天頂：${c.mcSign} ${c.mcDegreeNum ?? 0}°${String(c.mcMinuteNum ?? 0).padStart(2, '0')}'`,
-    ]
-      .filter(Boolean)
-      .join('\n');
+    ].filter(Boolean).join('\n');
   }
 
-  // ── 渲染 ──────────────────────────────────────
+  // ── Loading / Error 狀態 ──────────────────────────
   if (loading) {
     return (
       <Container className="py-5 text-center">
@@ -113,57 +113,35 @@ export default function ClientDetail() {
       {/* 頁首：客戶資訊列 */}
       <div className="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
         <div>
-          <h4 className="mb-1">
-            {client.name}
-            {client.isLord && (
-              <Badge bg="warning" text="dark" className="ms-2" style={{ fontSize: '0.75rem' }}>
-                ★ 命主星
-              </Badge>
-            )}
-          </h4>
+          <h4 className="mb-1">{client.name}</h4>
           <div className="text-muted" style={{ fontSize: '0.85rem' }}>
             {client.birthDate  && <span className="me-3">🗓 {client.birthDate}</span>}
             {client.birthTime  && <span className="me-3">⏰ {client.birthTime}</span>}
             {client.birthPlace && <span>📍 {client.birthPlace}</span>}
           </div>
         </div>
-        <div className="d-flex gap-2 flex-wrap">
-          <Button variant="outline-primary"   size="sm" as={Link} to={`/clients/${id}/edit`}>
-            編輯
-          </Button>
-          <Button variant="outline-danger"    size="sm" onClick={handleDelete}>
-            刪除
-          </Button>
-          <Button variant="outline-success"   size="sm" onClick={handleExportChart}>
-            ⬇ 匯出命盤
-          </Button>
-          <Button variant="outline-secondary" size="sm" onClick={() => setShowAI(true)}>
-            🤖 AI 解析
-          </Button>
+        <div className="d-flex gap-2">
+          <Button variant="outline-primary"   size="sm" as={Link} to={`/clients/${id}/edit`}>編輯</Button>
+          <Button variant="outline-danger"    size="sm" onClick={handleDelete}>刪除</Button>
+          <Button variant="outline-success"   size="sm" onClick={handleExportChart}>⬇ 匯出命盤</Button>
+          <Button variant="outline-secondary" size="sm" onClick={() => setShowAI(true)}>🤖 AI 解析</Button>
         </div>
       </div>
 
-      {/* 匯出命盤失敗訊息 */}
-      {error && (
-        <Alert variant="danger" dismissible onClose={() => setError(null)} className="mb-3">
-          {error}
-        </Alert>
-      )}
-
-      {/* Tabs */}
+      {/* ── Tabs ─────────────────────────────────────── */}
       <Tabs defaultActiveKey="chart" className="mb-3" mountOnEnter>
 
-        {/* ── Tab 1：命盤資料 ──────────────────────────────────── */}
+        {/* Tab 1：命盤資料 */}
         <Tab eventKey="chart" title="命盤資料">
           <Row>
             <Col lg={7} className="mb-3">
 
-              {/* 上升點 / 天頂資訊卡（來源：GET /api/clients/{id}） */}
-              <Card className="mb-3 shadow-sm border-0">
-                <Card.Body style={{ fontSize: '0.85rem' }}>
+              {/* 上升 / 天頂四軸資訊（v9 欄位，允許 null） */}
+              <Card className="mb-3">
+                <Card.Body>
                   <Row>
                     <Col xs={6}>
-                      <div className="text-muted mb-1">上升點 ASC</div>
+                      <div className="text-muted mb-1">上升 ASC</div>
                       <div className="fw-semibold">
                         {client.ascSign
                           ? `${client.ascSign} ${client.ascDegreeNum ?? 0}°${String(client.ascMinuteNum ?? 0).padStart(2, '0')}'`
@@ -199,20 +177,22 @@ export default function ClientDetail() {
           <AspectTable clientId={id} />
         </Tab>
 
-        {/* ── Tab 2：我的解析 ──────────────────────────────────── */}
+        {/* Tab 2：我的解析 */}
         <Tab eventKey="analysis" title="我的解析">
           <AnalysisBlock clientId={id} />
         </Tab>
 
-        {/* ── Tab 3：諮詢記錄 ──────────────────────────────────── */}
+        {/* Tab 3：諮詢記錄 */}
         <Tab eventKey="log" title="諮詢記錄">
           <ConsultationLog clientId={id} />
         </Tab>
 
       </Tabs>
 
-      {/* AI 諮詢 Modal（條件渲染：關閉時 unmount 自動清空 state）
-          noteTitle / noteContent 對應 AIChatModal props 規格 */}
+      {/* AI 諮詢 Modal
+          條件渲染（showAI && ...）：關閉時元件 unmount，React 自動清空所有對話 state，
+          不需手動 reset，符合規格書「對話於 Modal 關閉時清空」。
+          noteTitle / noteContent 對應 AIChatModal props 定義，傳錯 prop 名稱會靜默無效（Bug #5-1）。 */}
       {showAI && (
         <AIChatModal
           show={showAI}
