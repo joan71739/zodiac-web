@@ -1,17 +1,3 @@
-// ============================================================
-// ElementNoteBlock.jsx — 元素解析區塊
-//
-// 邏輯參考 AnalysisBlock.jsx，差異：
-//   - 無 clientId，改用 signKey / planetKey / houseKey 定位
-//   - 多一個 tag 欄位（手動輸入，第二批細作 UI）
-//   - 無 AI 諮詢按鈕（元素解析暫不接 AI）
-//
-// GET  → 後端依 sort_order DESC 回傳，最新在最上
-// POST → 新增後 prepend 至列表最頂端
-// PUT  → 更新 state 中對應項目，不重新 fetch
-// DEL  → 從 state 移除，不重新 fetch
-// ============================================================
-
 import { useState, useEffect } from 'react'
 import { Card, Button, Form, Spinner, Alert } from 'react-bootstrap'
 import {
@@ -20,6 +6,7 @@ import {
     updateElementNote,
     deleteElementNote,
 } from '../api/elementNotes'
+import { TOPIC_OPTIONS } from '../utils/codeMap'
 
 export default function ElementNoteBlock({ signKey, planetKey = null, houseKey = null }) {
     const [blocks,    setBlocks]    = useState([])
@@ -28,7 +15,6 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
     const [errorMsg,  setErrorMsg]  = useState('')
     const [successId, setSuccessId] = useState(null)
 
-    // ── 初次載入 ────────────────────────────────────────
     useEffect(() => {
         if (!signKey) return
         const fetch = async () => {
@@ -45,17 +31,15 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
         fetch()
     }, [signKey, planetKey, houseKey])
 
-    // ── 欄位變更 ─────────────────────────────────────────
     const handleChange = (id, field, value) => {
         setBlocks(blocks.map(b => b.id === id ? { ...b, [field]: value } : b))
     }
 
-    // ── 新增 ─────────────────────────────────────────────
     const handleAdd = async () => {
         try {
             const res = await createElementNote(
                 signKey, planetKey, houseKey,
-                { title: '', content: '', tag: '' }
+                { title: '', content: '', tag: '', topic: null }
             )
             setBlocks([res.data, ...blocks])
         } catch {
@@ -63,7 +47,6 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
         }
     }
 
-    // ── 儲存 ─────────────────────────────────────────────
     const handleSave = async (block) => {
         try {
             setSavingId(block.id)
@@ -71,6 +54,7 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
                 title:   block.title,
                 content: block.content,
                 tag:     block.tag,
+                topic:   block.topic || null,
             })
             setBlocks(blocks.map(b => b.id === block.id ? res.data : b))
             setSuccessId(block.id)
@@ -82,7 +66,6 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
         }
     }
 
-    // ── 刪除 ─────────────────────────────────────────────
     const handleDelete = async (id) => {
         if (!window.confirm('確定刪除這筆解析？')) return
         try {
@@ -93,7 +76,6 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
         }
     }
 
-    // ── render ───────────────────────────────────────────
     if (loading) return (
         <div className="text-center py-4">
             <Spinner animation="border" size="sm" />
@@ -140,12 +122,7 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
                             value={block.title || ''}
                             onChange={e => handleChange(block.id, 'title', e.target.value)}
                             className="mb-2"
-                            style={{
-                                backgroundColor: '#1C1C2E',
-                                color: '#E8E0F0',
-                                border: '1px solid #2D2D45',
-                                fontSize: '0.9rem',
-                            }}
+                            style={inputStyle}
                         />
 
                         {/* 內容 */}
@@ -156,33 +133,35 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
                             value={block.content || ''}
                             onChange={e => handleChange(block.id, 'content', e.target.value)}
                             className="mb-2"
-                            style={{
-                                backgroundColor: '#1C1C2E',
-                                color: '#E8E0F0',
-                                border: '1px solid #2D2D45',
-                                fontSize: '0.88rem',
-                                resize: 'vertical',
-                            }}
+                            style={{ ...inputStyle, resize: 'vertical', fontSize: '0.88rem' }}
                         />
 
-                        {/* 標籤（第一批先開欄位，第二批細作 UI） */}
-                        <Form.Control
-                            type="text"
-                            placeholder="標籤（可用逗號分隔，例如：本質, 火元素）"
-                            value={block.tag || ''}
-                            onChange={e => handleChange(block.id, 'tag', e.target.value)}
-                            className="mb-3"
-                            style={{
-                                backgroundColor: '#1C1C2E',
-                                color: '#E8E0F0',
-                                border: '1px solid #2D2D45',
-                                fontSize: '0.82rem',
-                            }}
-                        />
+                        {/* 標籤 + 主題（同一排） */}
+                        <div className="d-flex gap-2 mb-3">
+                            {/* 標籤 */}
+                            <Form.Control
+                                type="text"
+                                placeholder="標籤（逗號分隔）"
+                                value={block.tag || ''}
+                                onChange={e => handleChange(block.id, 'tag', e.target.value)}
+                                style={{ ...inputStyle, fontSize: '0.82rem', flex: 2 }}
+                            />
+
+                            {/* 主題分類下拉 */}
+                            <Form.Select
+                                value={block.topic || ''}
+                                onChange={e => handleChange(block.id, 'topic', e.target.value || null)}
+                                style={{ ...inputStyle, fontSize: '0.82rem', flex: 1 }}
+                            >
+                                <option value="">── 主題分類 ──</option>
+                                {TOPIC_OPTIONS.map(({ code, label }) => (
+                                    <option key={code} value={code}>{label}</option>
+                                ))}
+                            </Form.Select>
+                        </div>
 
                         {/* 操作列 */}
                         <div className="d-flex justify-content-between align-items-center">
-                            {/* 建立/更新時間 */}
                             <span style={{ fontSize: '0.72rem', color: '#555' }}>
                                 {block.updatedAt
                                     ? `更新：${new Date(block.updatedAt).toLocaleString('zh-TW')}`
@@ -190,13 +169,11 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
                             </span>
 
                             <div className="d-flex gap-2">
-                                {/* 儲存成功提示 */}
                                 {successId === block.id && (
                                     <span style={{ fontSize: '0.8rem', color: '#28a745', lineHeight: '31px' }}>
                                         ✓ 已儲存
                                     </span>
                                 )}
-
                                 <Button
                                     size="sm"
                                     variant="outline-danger"
@@ -204,7 +181,6 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
                                 >
                                     刪除
                                 </Button>
-
                                 <Button
                                     size="sm"
                                     variant="outline-success"
@@ -222,4 +198,11 @@ export default function ElementNoteBlock({ signKey, planetKey = null, houseKey =
             ))}
         </div>
     )
+}
+
+const inputStyle = {
+    backgroundColor: '#1C1C2E',
+    color: '#E8E0F0',
+    border: '1px solid #2D2D45',
+    fontSize: '0.9rem',
 }
