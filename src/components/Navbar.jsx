@@ -1,62 +1,18 @@
 // ============================================================
-// Navbar.jsx — v12
-// 修改說明：新增「行運解析」展開選單
-//   - 行運解析：點擊跳頁 /transits + 展開子選單
-//   - 各外行星：點擊只展開/收合，不跳頁
-//   - 過境宮位：點擊跳頁 /transits/planets/:planet/houses/:house
-//   - 各相位：點擊只展開/收合，不跳頁
-//   - 本命星：點擊跳頁 /transits/planets/:planet/aspects/:aspect/natal/:natal
+// Navbar.jsx — v13
+// 修改說明：所有代碼對照統一從 codeMap.js 引入，移除 hard-code
 // ============================================================
 
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { SIGN_OPTIONS } from '../utils/codeMap';
-
-// 元素解析：第一批七顆行星
-const PLANETS_7 = [
-    { code: 'Q', label: '太陽' },
-    { code: 'W', label: '月亮' },
-    { code: 'E', label: '水星' },
-    { code: 'R', label: '金星' },
-    { code: 'T', label: '火星' },
-    { code: 'Y', label: '木星' },
-    { code: 'U', label: '土星' },
-]
-
-// 行運解析：外行星
-const OUTER_PLANETS = [
-    { code: 'Y', label: '木星' },
-    { code: 'U', label: '土星' },
-    { code: 'I', label: '天王星' },
-    { code: 'O', label: '海王星' },
-    { code: 'P', label: '冥王星' },
-]
-
-// 行運解析：相位
-const ASPECTS = [
-    { code: 'q', label: '合相' },
-    { code: 'w', label: '對分相' },
-    { code: 'e', label: '三分相' },
-    { code: 'r', label: '四分相' },
-    { code: 't', label: '六分相' },
-]
-
-// 行運解析：本命個人行星
-const PERSONAL_PLANETS = [
-    { code: 'Q', label: '太陽' },
-    { code: 'W', label: '月亮' },
-    { code: 'E', label: '水星' },
-    { code: 'R', label: '金星' },
-    { code: 'T', label: '火星' },
-]
-
-// 過境宮位
-const HOUSES = [
-    { num: 1, label: '一宮' }, { num: 2, label: '二宮' }, { num: 3, label: '三宮' },
-    { num: 4, label: '四宮' }, { num: 5, label: '五宮' }, { num: 6, label: '六宮' },
-    { num: 7, label: '七宮' }, { num: 8, label: '八宮' }, { num: 9, label: '九宮' },
-    { num: 10, label: '十宮' }, { num: 11, label: '十一宮' }, { num: 12, label: '十二宮' },
-]
+import {
+    SIGN_OPTIONS,
+    PLANET_7_OPTIONS,
+    OUTER_PLANET_OPTIONS,
+    PERSONAL_PLANET_OPTIONS,
+    ASPECT_SIMPLE_OPTIONS,
+    HOUSE_OPTIONS,
+} from '../utils/codeMap';
 
 const NAV_ITEMS = [
     { to: '/',       label: '客戶列表', icon: '👥' },
@@ -65,17 +21,17 @@ const NAV_ITEMS = [
 ]
 
 export default function Navbar() {
-    const [collapsed,        setCollapsed]        = useState(false)
+    const [collapsed,         setCollapsed]         = useState(false)
     // 元素解析
-    const [elemOpen,         setElemOpen]         = useState(false)
-    const [signsOpen,        setSignsOpen]        = useState(false)
-    const [planetsOpen,      setPlanetsOpen]      = useState(false)
-    const [openPlanetCode,   setOpenPlanetCode]   = useState(null)
+    const [elemOpen,          setElemOpen]          = useState(false)
+    const [signsOpen,         setSignsOpen]         = useState(false)
+    const [planetsOpen,       setPlanetsOpen]       = useState(false)
+    const [openPlanetCode,    setOpenPlanetCode]    = useState(null)
     // 行運解析
-    const [transitOpen,      setTransitOpen]      = useState(false)
-    const [openTransitPlanet, setOpenTransitPlanet] = useState(null)   // 展開中的外行星
-    const [openHousesFor,    setOpenHousesFor]    = useState(null)     // 展開宮位的行星
-    const [openAspectKey,    setOpenAspectKey]    = useState(null)     // 'Y-q' 格式
+    const [transitOpen,       setTransitOpen]       = useState(false)
+    const [openTransitPlanet, setOpenTransitPlanet] = useState(null)
+    const [openHousesFor,     setOpenHousesFor]     = useState(null)
+    const [openAspectKey,     setOpenAspectKey]     = useState(null)
 
     const location = useLocation()
     const navigate = useNavigate()
@@ -85,8 +41,8 @@ export default function Navbar() {
     const width = collapsed ? 56 : 220
 
     // ── 元素解析 handlers ────────────────────────────
-    const handleElemClick    = () => { navigate('/elements');        setElemOpen(p => !p) }
-    const handleSignsClick   = () => { navigate('/elements/signs');  setSignsOpen(p => !p) }
+    const handleElemClick    = () => { navigate('/elements');         setElemOpen(p => !p) }
+    const handleSignsClick   = () => { navigate('/elements/signs');   setSignsOpen(p => !p) }
     const handlePlanetsClick = () => { navigate('/elements/planets'); setPlanetsOpen(p => !p) }
     const handlePlanetClick  = (code) => setOpenPlanetCode(p => p === code ? null : code)
 
@@ -97,32 +53,29 @@ export default function Navbar() {
         setOpenHousesFor(null)
         setOpenAspectKey(null)
     }
-    const handleHousesToggle = (planetCode) => {
+    const handleHousesToggle = (planetCode) =>
         setOpenHousesFor(p => p === planetCode ? null : planetCode)
-    }
     const handleAspectToggle = (planetCode, aspectCode) => {
         const key = `${planetCode}-${aspectCode}`
         setOpenAspectKey(p => p === key ? null : key)
     }
 
     return (
-        <div
-            style={{
-                width,
-                minHeight: '100vh',
-                backgroundColor: '#1C1C2E',
-                color: '#E8E0F0',
-                display: 'flex',
-                flexDirection: 'column',
-                transition: 'width 0.2s ease',
-                overflow: 'hidden',
-                flexShrink: 0,
-                position: 'sticky',
-                top: 0,
-                height: '100vh',
-                overflowY: 'auto',
-            }}
-        >
+        <div style={{
+            width,
+            minHeight: '100vh',
+            backgroundColor: '#1C1C2E',
+            color: '#E8E0F0',
+            display: 'flex',
+            flexDirection: 'column',
+            transition: 'width 0.2s ease',
+            overflow: 'hidden',
+            flexShrink: 0,
+            position: 'sticky',
+            top: 0,
+            height: '100vh',
+            overflowY: 'auto',
+        }}>
             {/* Logo */}
             <div style={{
                 padding: '16px 12px',
@@ -139,10 +92,10 @@ export default function Navbar() {
                         ✦ 占星顧問後台
                     </span>
                 )}
-                <button
-                    onClick={() => setCollapsed(!collapsed)}
-                    style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1rem', padding: 0, lineHeight: 1 }}
-                >
+                <button onClick={() => setCollapsed(!collapsed)} style={{
+                    background: 'none', border: 'none', color: '#888',
+                    cursor: 'pointer', fontSize: '1rem', padding: 0, lineHeight: 1,
+                }}>
                     {collapsed ? '▶' : '◀'}
                 </button>
             </div>
@@ -200,12 +153,13 @@ export default function Navbar() {
                                 {signsOpen && (
                                     <div style={{ paddingLeft: 10 }}>
                                         {SIGN_OPTIONS.map(({ code, label }) => (
-                                            <NavLink key={code} to={`/elements/signs/${code}`} style={({ isActive }) => ({
-                                                ...leafItemStyle,
-                                                color: isActive ? '#D4AF37' : '#5A5A80',
-                                                backgroundColor: isActive ? '#252540' : 'transparent',
-                                                borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
-                                            })}>
+                                            <NavLink key={code} to={`/elements/signs/${code}`}
+                                                style={({ isActive }) => ({
+                                                    ...leafItemStyle,
+                                                    color: isActive ? '#D4AF37' : '#5A5A80',
+                                                    backgroundColor: isActive ? '#252540' : 'transparent',
+                                                    borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
+                                                })}>
                                                 {label}
                                             </NavLink>
                                         ))}
@@ -222,13 +176,12 @@ export default function Navbar() {
                                 </div>
                                 {planetsOpen && (
                                     <div style={{ paddingLeft: 10 }}>
-                                        {PLANETS_7.map(({ code, label }) => {
+                                        {PLANET_7_OPTIONS.map(({ code, label }) => {
                                             const isOpen = openPlanetCode === code
                                             return (
                                                 <div key={code}>
                                                     <div onClick={() => handlePlanetClick(code)} style={{
-                                                        ...subMenuItemStyle,
-                                                        color: '#8080B0', fontSize: '0.82rem',
+                                                        ...subMenuItemStyle, color: '#8080B0', fontSize: '0.82rem',
                                                     }}>
                                                         <span style={{ flex: 1 }}>{label}</span>
                                                         <span style={{ fontSize: '0.65rem', color: '#555' }}>{isOpen ? '▲' : '▼'}</span>
@@ -236,16 +189,14 @@ export default function Navbar() {
                                                     {isOpen && (
                                                         <div style={{ paddingLeft: 10 }}>
                                                             {SIGN_OPTIONS.map(({ code: sCode, label: sLabel }) => (
-                                                                <NavLink
-                                                                    key={sCode}
+                                                                <NavLink key={sCode}
                                                                     to={`/elements/planets/${code}/signs/${sCode}`}
                                                                     style={({ isActive }) => ({
                                                                         ...leafItemStyle,
                                                                         color: isActive ? '#D4AF37' : '#5A5A80',
                                                                         backgroundColor: isActive ? '#252540' : 'transparent',
                                                                         borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
-                                                                    })}
-                                                                >
+                                                                    })}>
                                                                     {sLabel}
                                                                 </NavLink>
                                                             ))}
@@ -261,7 +212,7 @@ export default function Navbar() {
                     </>
                 )}
 
-                {/* ── 行運解析（新增）── */}
+                {/* ── 行運解析 ── */}
                 {!collapsed && (
                     <>
                         <div onClick={handleTransitClick} style={{
@@ -277,16 +228,13 @@ export default function Navbar() {
 
                         {transitOpen && (
                             <div style={{ paddingLeft: 12 }}>
-                                {OUTER_PLANETS.map(({ code: pCode, label: pLabel }) => {
+                                {OUTER_PLANET_OPTIONS.map(({ code: pCode, label: pLabel }) => {
                                     const isPlanetOpen = openTransitPlanet === pCode
                                     const isHousesOpen = openHousesFor === pCode
-
                                     return (
                                         <div key={pCode}>
-                                            {/* 外行星：展開/收合 */}
                                             <div onClick={() => handleTransitPlanetClick(pCode)} style={{
-                                                ...subMenuItemStyle,
-                                                color: '#9090B8',
+                                                ...subMenuItemStyle, color: '#9090B8',
                                             }}>
                                                 <span style={{ flex: 1 }}>{pLabel}</span>
                                                 <span style={{ fontSize: '0.65rem', color: '#555' }}>{isPlanetOpen ? '▲' : '▼'}</span>
@@ -294,28 +242,24 @@ export default function Navbar() {
 
                                             {isPlanetOpen && (
                                                 <div style={{ paddingLeft: 10 }}>
-
                                                     {/* 過境宮位 */}
                                                     <div onClick={() => handleHousesToggle(pCode)} style={{
-                                                        ...subMenuItemStyle,
-                                                        color: '#8080B0', fontSize: '0.82rem',
+                                                        ...subMenuItemStyle, color: '#8080B0', fontSize: '0.82rem',
                                                     }}>
                                                         <span style={{ flex: 1 }}>過境宮位</span>
                                                         <span style={{ fontSize: '0.65rem', color: '#555' }}>{isHousesOpen ? '▲' : '▼'}</span>
                                                     </div>
                                                     {isHousesOpen && (
                                                         <div style={{ paddingLeft: 10 }}>
-                                                            {HOUSES.map(({ num, label: hLabel }) => (
-                                                                <NavLink
-                                                                    key={num}
+                                                            {HOUSE_OPTIONS.map(({ num, label: hLabel }) => (
+                                                                <NavLink key={num}
                                                                     to={`/transits/planets/${pCode}/houses/${num}`}
                                                                     style={({ isActive }) => ({
                                                                         ...leafItemStyle,
                                                                         color: isActive ? '#D4AF37' : '#5A5A80',
                                                                         backgroundColor: isActive ? '#252540' : 'transparent',
                                                                         borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
-                                                                    })}
-                                                                >
+                                                                    })}>
                                                                     {hLabel}
                                                                 </NavLink>
                                                             ))}
@@ -323,31 +267,28 @@ export default function Navbar() {
                                                     )}
 
                                                     {/* 各相位 */}
-                                                    {ASPECTS.map(({ code: aCode, label: aLabel }) => {
+                                                    {ASPECT_SIMPLE_OPTIONS.map(({ code: aCode, label: aLabel }) => {
                                                         const aspectKey = `${pCode}-${aCode}`
                                                         const isAspectOpen = openAspectKey === aspectKey
                                                         return (
                                                             <div key={aCode}>
                                                                 <div onClick={() => handleAspectToggle(pCode, aCode)} style={{
-                                                                    ...subMenuItemStyle,
-                                                                    color: '#8080B0', fontSize: '0.82rem',
+                                                                    ...subMenuItemStyle, color: '#8080B0', fontSize: '0.82rem',
                                                                 }}>
                                                                     <span style={{ flex: 1 }}>{aLabel}</span>
                                                                     <span style={{ fontSize: '0.65rem', color: '#555' }}>{isAspectOpen ? '▲' : '▼'}</span>
                                                                 </div>
                                                                 {isAspectOpen && (
                                                                     <div style={{ paddingLeft: 10 }}>
-                                                                        {PERSONAL_PLANETS.map(({ code: nCode, label: nLabel }) => (
-                                                                            <NavLink
-                                                                                key={nCode}
+                                                                        {PERSONAL_PLANET_OPTIONS.map(({ code: nCode, label: nLabel }) => (
+                                                                            <NavLink key={nCode}
                                                                                 to={`/transits/planets/${pCode}/aspects/${aCode}/natal/${nCode}`}
                                                                                 style={({ isActive }) => ({
                                                                                     ...leafItemStyle,
                                                                                     color: isActive ? '#D4AF37' : '#5A5A80',
                                                                                     backgroundColor: isActive ? '#252540' : 'transparent',
                                                                                     borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
-                                                                                })}
-                                                                            >
+                                                                                })}>
                                                                                 本命{nLabel}
                                                                             </NavLink>
                                                                         ))}
@@ -389,10 +330,9 @@ export default function Navbar() {
                 )}
             </nav>
 
-            {/* 底部版本 */}
             {!collapsed && (
                 <div style={{ padding: '10px 16px', borderTop: '1px solid #2D2D45', fontSize: '0.7rem', color: '#555' }}>
-                    v12
+                    v13
                 </div>
             )}
 
@@ -404,7 +344,6 @@ export default function Navbar() {
     )
 }
 
-// ── 共用樣式 ────────────────────────────────────────────
 const menuItemStyle = {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '10px 16px', cursor: 'pointer',
