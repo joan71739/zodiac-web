@@ -1,6 +1,7 @@
 // TransitHouseNotes.jsx — 行運星 × 過境宮位解析頁
 // 路由：/transits/planets/:transitPlanet/houses/:transitHouse
 // 說明：單頁，無頁籤，直接顯示 TransitNoteBlock
+// Fix：麵包屑第二層改為純文字，不做跳頁（/transits/planets/:planet 沒有獨立頁面）
 
 import { useParams, useNavigate } from 'react-router-dom'
 import { PLANET_CODE_MAP } from '../utils/codeMap'
@@ -28,14 +29,14 @@ export default function TransitHouseNotes() {
                     ← 行運解析
                 </button>
                 <span style={{ color: '#444' }}>/</span>
-                <button
-                    onClick={() => navigate(`/transits/planets/${transitPlanet}`)}
-                    style={{ ...backBtnStyle, color: '#D4AF37' }}
-                >
+                {/* 行星層：純文字，不跳頁（無獨立行星頁面） */}
+                <span style={{ color: '#D4AF37', fontSize: '0.85rem' }}>
                     {transitLabel}
-                </button>
+                </span>
                 <span style={{ color: '#444' }}>/</span>
-                <span style={{ color: '#B0A8C8' }}>過境{houseLabel}</span>
+                <span style={{ color: '#B0A8C8', fontSize: '0.85rem' }}>
+                    過境{houseLabel}
+                </span>
             </div>
 
             <h5 style={{ color: '#D4AF37', marginBottom: 24 }}>
