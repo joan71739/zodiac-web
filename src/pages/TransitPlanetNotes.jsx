@@ -1,6 +1,7 @@
 // TransitPlanetNotes.jsx — 行運星 × 相位 × 本命星解析頁
 // 路由：/transits/planets/:transitPlanet/aspects/:aspectType/natal/:natalPlanet
 // 說明：13 個頁籤（詳細資料 + 過境一宮~十二宮）+ TransitNoteBlock
+// Fix：麵包屑行星層改為純文字，不跳頁（/transits/planets/:planet 沒有獨立頁面）
 
 import { useParams, useNavigate } from 'react-router-dom'
 import { Tab, Tabs } from 'react-bootstrap'
@@ -10,7 +11,7 @@ import TransitNoteBlock from '../components/TransitNoteBlock'
 // 13 個頁籤定義
 // transit_house=null → 詳細資料頁籤；transit_house=1~12 → 過境宮位頁籤
 const TABS = [
-    { key: 'detail',  label: '詳細資料', transitHouse: null },
+    { key: 'detail',  label: '詳細資料',  transitHouse: null },
     { key: 'house1',  label: '過境一宮',  transitHouse: 1  },
     { key: 'house2',  label: '過境二宮',  transitHouse: 2  },
     { key: 'house3',  label: '過境三宮',  transitHouse: 3  },
@@ -41,16 +42,18 @@ export default function TransitPlanetNotes() {
                     ← 行運解析
                 </button>
                 <span style={{ color: '#444' }}>/</span>
-                <button
-                    onClick={() => navigate(`/transits/planets/${transitPlanet}`)}
-                    style={{ ...backBtnStyle, color: '#D4AF37' }}
-                >
+                {/* 行星層：純文字，不跳頁（無獨立行星頁面） */}
+                <span style={{ color: '#D4AF37', fontSize: '0.85rem' }}>
                     {transitLabel}
-                </button>
+                </span>
                 <span style={{ color: '#444' }}>/</span>
-                <span style={{ color: '#D4AF37' }}>{aspectLabel}</span>
+                <span style={{ color: '#D4AF37', fontSize: '0.85rem' }}>
+                    {aspectLabel}
+                </span>
                 <span style={{ color: '#444' }}>/</span>
-                <span style={{ color: '#B0A8C8' }}>本命{natalLabel}</span>
+                <span style={{ color: '#B0A8C8', fontSize: '0.85rem' }}>
+                    本命{natalLabel}
+                </span>
             </div>
 
             <h5 style={{ color: '#D4AF37', marginBottom: 24 }}>
