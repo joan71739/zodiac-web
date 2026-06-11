@@ -73,6 +73,35 @@ export const PLANET_OPTIONS = [
   { code: 'P', label: '冥王星' },
 ]
 
+/** 外行星選項（行運解析用：木星～冥王星） */
+export const OUTER_PLANET_OPTIONS = [
+  { code: 'Y', label: '木星' },
+  { code: 'U', label: '土星' },
+  { code: 'I', label: '天王星' },
+  { code: 'O', label: '海王星' },
+  { code: 'P', label: '冥王星' },
+]
+
+/** 個人行星選項（行運解析本命星用：太陽～火星） */
+export const PERSONAL_PLANET_OPTIONS = [
+  { code: 'Q', label: '太陽' },
+  { code: 'W', label: '月亮' },
+  { code: 'E', label: '水星' },
+  { code: 'R', label: '金星' },
+  { code: 'T', label: '火星' },
+]
+
+/** 元素解析行星選項（第一批七顆） */
+export const PLANET_7_OPTIONS = [
+  { code: 'Q', label: '太陽' },
+  { code: 'W', label: '月亮' },
+  { code: 'E', label: '水星' },
+  { code: 'R', label: '金星' },
+  { code: 'T', label: '火星' },
+  { code: 'Y', label: '木星' },
+  { code: 'U', label: '土星' },
+]
+
 /** 星座選項 */
 export const SIGN_OPTIONS = [
   { code: 'a', label: '牡羊座' },
@@ -98,6 +127,37 @@ export const ASPECT_OPTIONS = [
   { code: 'w', label: '☍ 對分相（180°）' },
 ]
 
+/** 相位選項（純文字，Navbar 行運選單用） */
+export const ASPECT_SIMPLE_OPTIONS = [
+  { code: 'q', label: '合相' },
+  { code: 'w', label: '對分相' },
+  { code: 'e', label: '三分相' },
+  { code: 'r', label: '四分相' },
+  { code: 't', label: '六分相' },
+]
+
+/** 宮位選項（數字 + 中文，表單 Select 用） */
+export const HOUSE_OPTIONS = [
+  { num: 1,  label: '一宮'   }, { num: 2,  label: '二宮'   },
+  { num: 3,  label: '三宮'   }, { num: 4,  label: '四宮'   },
+  { num: 5,  label: '五宮'   }, { num: 6,  label: '六宮'   },
+  { num: 7,  label: '七宮'   }, { num: 8,  label: '八宮'   },
+  { num: 9,  label: '九宮'   }, { num: 10, label: '十宮'   },
+  { num: 11, label: '十一宮' }, { num: 12, label: '十二宮' },
+]
+
+/** 宮位數字 → 中文（ReferencePanel、TransitHouseNotes 等顯示用） */
+export const HOUSE_NUM_LABEL_MAP = {
+  1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六',
+  7: '七', 8: '八', 9: '九', 10: '十', 11: '十一', 12: '十二',
+}
+
+/** 行星占星符號（ReferencePanel 顯示用） */
+export const PLANET_SYMBOL_MAP = {
+  Q: '☉', W: '☽', E: '☿', R: '♀', T: '♂',
+  Y: '♃', U: '♄', I: '♅', O: '♆', P: '♇',
+}
+
 /** 主題分類選項（對應 code_references category='topic'） */
 export const TOPIC_OPTIONS = [
   { code: 'general',   label: '核心特質／本質' },
@@ -121,9 +181,12 @@ export const TOPIC_CODE_MAP = {
 export const planetLabel  = (code) => PLANET_CODE_MAP[code]  ?? code
 export const signLabel    = (code) => SIGN_CODE_MAP[code]    ?? code
 export const aspectLabel  = (code) => ASPECT_CODE_MAP[code]  ?? code
-export const topicLabel = (code) => TOPIC_CODE_MAP[code] ?? code
+export const topicLabel   = (code) => TOPIC_CODE_MAP[code]   ?? code
+
+/** 宮位數字 → 中文宮名（例：10 → '十宮'） */
+export const houseLabel = (num) =>
+  HOUSE_NUM_LABEL_MAP[num] != null ? `${HOUSE_NUM_LABEL_MAP[num]}宮` : `${num}宮`
 
 /** 相位完整標籤（含符號），找不到時 fallback */
 export const aspectFullLabel = (code) =>
   ASPECT_OPTIONS.find(o => o.code === code)?.label ?? code
-
