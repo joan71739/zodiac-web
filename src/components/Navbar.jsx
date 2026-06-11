@@ -1,6 +1,8 @@
 // ============================================================
-// Navbar.jsx — v13
-// 修改說明：所有代碼對照統一從 codeMap.js 引入，移除 hard-code
+// Navbar.jsx — v14
+// 修改說明：行運解析 > 過境宮位，從「展開十二宮各自一葉」
+//           改為「直接 NavLink 跳頁」（頁面內含 13 Tab）
+//           同時移除 openHousesFor state 及 handleHousesToggle
 // ============================================================
 
 import React, { useState } from 'react';
@@ -11,27 +13,26 @@ import {
     OUTER_PLANET_OPTIONS,
     PERSONAL_PLANET_OPTIONS,
     ASPECT_SIMPLE_OPTIONS,
-    HOUSE_OPTIONS,
 } from '../utils/codeMap';
 
 const NAV_ITEMS = [
-    { to: '/',       label: '客戶列表', icon: '👥' },
+    { to: '/', label: '客戶列表', icon: '👥' },
     { to: '/search', label: '行星篩選', icon: '🔍' },
     { to: '/backup', label: '備份管理', icon: '💾' },
 ]
 
 export default function Navbar() {
-    const [collapsed,         setCollapsed]         = useState(false)
+    const [collapsed, setCollapsed] = useState(false)
     // 元素解析
-    const [elemOpen,          setElemOpen]          = useState(false)
-    const [signsOpen,         setSignsOpen]         = useState(false)
-    const [planetsOpen,       setPlanetsOpen]       = useState(false)
-    const [openPlanetCode,    setOpenPlanetCode]    = useState(null)
+    const [elemOpen, setElemOpen] = useState(false)
+    const [signsOpen, setSignsOpen] = useState(false)
+    const [planetsOpen, setPlanetsOpen] = useState(false)
+    const [openPlanetCode, setOpenPlanetCode] = useState(null)
     // 行運解析
-    const [transitOpen,       setTransitOpen]       = useState(false)
+    const [transitOpen, setTransitOpen] = useState(false)
     const [openTransitPlanet, setOpenTransitPlanet] = useState(null)
-    const [openHousesFor,     setOpenHousesFor]     = useState(null)
-    const [openAspectKey,     setOpenAspectKey]     = useState(null)
+    const [openAspectKey, setOpenAspectKey] = useState(null)
+    // ↑ openHousesFor 已移除，過境宮位改為直接跳頁
 
     const location = useLocation()
     const navigate = useNavigate()
@@ -41,20 +42,17 @@ export default function Navbar() {
     const width = collapsed ? 56 : 220
 
     // ── 元素解析 handlers ────────────────────────────
-    const handleElemClick    = () => { navigate('/elements');         setElemOpen(p => !p) }
-    const handleSignsClick   = () => { navigate('/elements/signs');   setSignsOpen(p => !p) }
+    const handleElemClick = () => { navigate('/elements'); setElemOpen(p => !p) }
+    const handleSignsClick = () => { navigate('/elements/signs'); setSignsOpen(p => !p) }
     const handlePlanetsClick = () => { navigate('/elements/planets'); setPlanetsOpen(p => !p) }
-    const handlePlanetClick  = (code) => setOpenPlanetCode(p => p === code ? null : code)
+    const handlePlanetClick = (code) => setOpenPlanetCode(p => p === code ? null : code)
 
     // ── 行運解析 handlers ────────────────────────────
     const handleTransitClick = () => { navigate('/transits'); setTransitOpen(p => !p) }
     const handleTransitPlanetClick = (code) => {
         setOpenTransitPlanet(p => p === code ? null : code)
-        setOpenHousesFor(null)
         setOpenAspectKey(null)
     }
-    const handleHousesToggle = (planetCode) =>
-        setOpenHousesFor(p => p === planetCode ? null : planetCode)
     const handleAspectToggle = (planetCode, aspectCode) => {
         const key = `${planetCode}-${aspectCode}`
         setOpenAspectKey(p => p === key ? null : key)
@@ -230,9 +228,9 @@ export default function Navbar() {
                             <div style={{ paddingLeft: 12 }}>
                                 {OUTER_PLANET_OPTIONS.map(({ code: pCode, label: pLabel }) => {
                                     const isPlanetOpen = openTransitPlanet === pCode
-                                    const isHousesOpen = openHousesFor === pCode
                                     return (
                                         <div key={pCode}>
+                                            {/* 行星層：展開/收合 */}
                                             <div onClick={() => handleTransitPlanetClick(pCode)} style={{
                                                 ...subMenuItemStyle, color: '#9090B8',
                                             }}>
@@ -242,31 +240,23 @@ export default function Navbar() {
 
                                             {isPlanetOpen && (
                                                 <div style={{ paddingLeft: 10 }}>
-                                                    {/* 過境宮位 */}
-                                                    <div onClick={() => handleHousesToggle(pCode)} style={{
-                                                        ...subMenuItemStyle, color: '#8080B0', fontSize: '0.82rem',
-                                                    }}>
-                                                        <span style={{ flex: 1 }}>過境宮位</span>
-                                                        <span style={{ fontSize: '0.65rem', color: '#555' }}>{isHousesOpen ? '▲' : '▼'}</span>
-                                                    </div>
-                                                    {isHousesOpen && (
-                                                        <div style={{ paddingLeft: 10 }}>
-                                                            {HOUSE_OPTIONS.map(({ num, label: hLabel }) => (
-                                                                <NavLink key={num}
-                                                                    to={`/transits/planets/${pCode}/houses/${num}`}
-                                                                    style={({ isActive }) => ({
-                                                                        ...leafItemStyle,
-                                                                        color: isActive ? '#D4AF37' : '#5A5A80',
-                                                                        backgroundColor: isActive ? '#252540' : 'transparent',
-                                                                        borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
-                                                                    })}>
-                                                                    {hLabel}
-                                                                </NavLink>
-                                                            ))}
-                                                        </div>
-                                                    )}
 
-                                                    {/* 各相位 */}
+                                                    {/* ── 過境宮位：直接跳頁（不再展開十二宮）── */}
+                                                    <NavLink
+                                                        to={`/transits/planets/${pCode}/houses`}
+                                                        style={({ isActive }) => ({
+                                                            ...leafItemStyle,
+                                                            color: isActive ? '#D4AF37' : '#8080B0',
+                                                            backgroundColor: isActive ? '#252540' : 'transparent',
+                                                            borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
+                                                            fontSize: '0.82rem',
+                                                            padding: '7px 8px',
+                                                        })}
+                                                    >
+                                                        過境宮位
+                                                    </NavLink>
+
+                                                    {/* ── 各相位 ── */}
                                                     {ASPECT_SIMPLE_OPTIONS.map(({ code: aCode, label: aLabel }) => {
                                                         const aspectKey = `${pCode}-${aCode}`
                                                         const isAspectOpen = openAspectKey === aspectKey
@@ -332,7 +322,7 @@ export default function Navbar() {
 
             {!collapsed && (
                 <div style={{ padding: '10px 16px', borderTop: '1px solid #2D2D45', fontSize: '0.7rem', color: '#555' }}>
-                    v13
+                    v14
                 </div>
             )}
 

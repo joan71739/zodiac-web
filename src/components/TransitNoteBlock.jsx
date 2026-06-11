@@ -1,8 +1,11 @@
 // TransitNoteBlock.jsx — 行運解析區塊
 // 邏輯完全照 ElementNoteBlock，只換 API 呼叫來源
+// 樣式對齊 AnalysisBlock（我的解析），差異只有：
+//   - 無 AI諮詢 按鈕
+//   - 第二列：標籤輸入框 ＋ 主題下拉（取代行星/星座/宮位/主題）
 
 import { useState, useEffect } from 'react'
-import { Card, Button, Form, Spinner, Alert } from 'react-bootstrap'
+import { Card, Button, Form, Spinner, Alert, Row, Col } from 'react-bootstrap'
 import {
     getTransitNotes,
     createTransitNote,
@@ -13,14 +16,14 @@ import { TOPIC_OPTIONS } from '../utils/codeMap'
 
 export default function TransitNoteBlock({
     transitPlanet,
-    aspectType    = null,
-    natalPlanet   = null,
-    transitHouse  = null,
+    aspectType = null,
+    natalPlanet = null,
+    transitHouse = null,
 }) {
-    const [blocks,    setBlocks]    = useState([])
-    const [loading,   setLoading]   = useState(true)
-    const [savingId,  setSavingId]  = useState(null)
-    const [errorMsg,  setErrorMsg]  = useState('')
+    const [blocks, setBlocks] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [savingId, setSavingId] = useState(null)
+    const [errorMsg, setErrorMsg] = useState('')
     const [successId, setSuccessId] = useState(null)
 
     useEffect(() => {
@@ -59,10 +62,10 @@ export default function TransitNoteBlock({
         try {
             setSavingId(block.id)
             const res = await updateTransitNote(block.id, {
-                title:   block.title,
+                title: block.title,
                 content: block.content,
-                tag:     block.tag,
-                topic:   block.topic || null,
+                tag: block.tag,
+                topic: block.topic || null,
             })
             setBlocks(blocks.map(b => b.id === block.id ? res.data : b))
             setSuccessId(block.id)
@@ -75,7 +78,7 @@ export default function TransitNoteBlock({
     }
 
     const handleDelete = async (id) => {
-        if (!window.confirm('確定刪除這筆解析？')) return
+        if (!window.confirm('確定刪除這筆解析？刪除後無法復原。')) return
         try {
             await deleteTransitNote(id)
             setBlocks(blocks.filter(b => b.id !== id))
@@ -85,87 +88,59 @@ export default function TransitNoteBlock({
     }
 
     if (loading) return (
-        <div className="text-center py-4">
+        <div className="text-center py-3">
             <Spinner animation="border" size="sm" />
         </div>
     )
 
     return (
         <div>
+            {/* 標題列 */}
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <h6 className="mb-0">解析筆記</h6>
+                <Button variant="outline-primary" size="sm" onClick={handleAdd}>
+                    + 新增解析
+                </Button>
+            </div>
+
+            {/* 錯誤提示 */}
             {errorMsg && (
-                <Alert variant="danger" dismissible onClose={() => setErrorMsg('')}>
+                <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">
                     {errorMsg}
                 </Alert>
             )}
 
-            <div className="d-flex justify-content-end mb-3">
-                <Button size="sm" variant="outline-primary" onClick={handleAdd}>
-                    ＋ 新增解析
-                </Button>
-            </div>
-
+            {/* 空狀態 */}
             {blocks.length === 0 && (
-                <div className="text-center text-muted py-4" style={{ fontSize: '0.9rem' }}>
-                    尚無解析，點擊「新增解析」開始撰寫
-                </div>
+                <p className="text-muted small">尚無解析，點擊「+ 新增解析」開始建立</p>
             )}
 
+            {/* 解析列表 */}
             {blocks.map(block => (
-                <Card
-                    key={block.id}
-                    className="mb-3"
-                    style={{
-                        border: successId === block.id
-                            ? '1px solid #4CAF50'
-                            : '1px solid #2D2D45',
-                        backgroundColor: '#1C1C2E',
-                    }}
-                >
+                <Card key={block.id} className="mb-3">
                     <Card.Body>
-                        {/* 標題列 + 操作按鈕 */}
+
+                        {/* 第一列：標題 + 操作按鈕 */}
                         <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
                             <Form.Control
                                 type="text"
                                 size="sm"
-                                placeholder="標題"
+                                placeholder="標題（例：土星合相本命太陽）"
                                 value={block.title ?? ''}
                                 onChange={e => handleChange(block.id, 'title', e.target.value)}
-                                style={{
-                                    maxWidth: '300px',
-                                    backgroundColor: '#2D2D45',
-                                    border: '1px solid #3D3D55',
-                                    color: '#E8E0F0',
-                                }}
+                                style={{ maxWidth: '300px' }}
                             />
                             <div className="d-flex gap-2 align-items-center flex-shrink-0">
-                                {/* 主題分類 */}
-                                <Form.Select
-                                    size="sm"
-                                    value={block.topic ?? ''}
-                                    onChange={e => handleChange(block.id, 'topic', e.target.value || null)}
-                                    style={{
-                                        maxWidth: '130px',
-                                        backgroundColor: '#2D2D45',
-                                        border: '1px solid #3D3D55',
-                                        color: '#B0A8C8',
-                                        fontSize: '0.78rem',
-                                    }}
-                                >
-                                    <option value="">未分類</option>
-                                    {TOPIC_OPTIONS.map(({ code, label }) => (
-                                        <option key={code} value={code}>{label}</option>
-                                    ))}
-                                </Form.Select>
-
                                 <Button
-                                    variant="outline-primary"
+                                    variant="outline-success"
                                     size="sm"
-                                    onClick={() => handleSave(block)}
                                     disabled={savingId === block.id}
+                                    onClick={() => handleSave(block)}
                                 >
                                     {savingId === block.id
                                         ? <Spinner animation="border" size="sm" />
-                                        : successId === block.id ? '✅ 已儲存' : '儲存'}
+                                        : successId === block.id ? '✓ 已儲存' : '儲存'
+                                    }
                                 </Button>
                                 <Button
                                     variant="outline-danger"
@@ -177,35 +152,40 @@ export default function TransitNoteBlock({
                             </div>
                         </div>
 
-                        {/* tag 欄位 */}
-                        <Form.Control
-                            type="text"
-                            size="sm"
-                            placeholder="標籤（選填）"
-                            value={block.tag ?? ''}
-                            onChange={e => handleChange(block.id, 'tag', e.target.value)}
-                            className="mb-2"
-                            style={{
-                                backgroundColor: '#2D2D45',
-                                border: '1px solid #3D3D55',
-                                color: '#E8E0F0',
-                                fontSize: '0.82rem',
-                            }}
-                        />
+                        {/* 第二列：標籤 ＋ 主題 */}
+                        <Row className="mb-2 g-2">
+                            <Col xs={12} sm={9}>
+                                <Form.Control
+                                    size="sm"
+                                    type="text"
+                                    placeholder="標籤（選填，逗號分隔）"
+                                    value={block.tag ?? ''}
+                                    onChange={e => handleChange(block.id, 'tag', e.target.value)}
+                                />
+                            </Col>
+                            <Col xs={12} sm={3}>
+                                <Form.Select
+                                    size="sm"
+                                    value={block.topic ?? ''}
+                                    onChange={e => handleChange(block.id, 'topic', e.target.value || null)}
+                                >
+                                    <option value="">主題（選填）</option>
+                                    {TOPIC_OPTIONS.map(({ code, label }) => (
+                                        <option key={code} value={code}>{label}</option>
+                                    ))}
+                                </Form.Select>
+                            </Col>
+                        </Row>
 
-                        {/* 解析內容 */}
+                        {/* 第三列：解析內容 */}
                         <Form.Control
                             as="textarea"
                             rows={5}
                             placeholder="在這裡輸入解析內容..."
                             value={block.content ?? ''}
                             onChange={e => handleChange(block.id, 'content', e.target.value)}
-                            style={{
-                                backgroundColor: '#2D2D45',
-                                border: '1px solid #3D3D55',
-                                color: '#E8E0F0',
-                            }}
                         />
+
                     </Card.Body>
                 </Card>
             ))}
