@@ -3,17 +3,7 @@ import { Form, Button, Table, Alert, Spinner, Row, Col } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom'
 import { searchClients } from '../api/clients'
 import { exportSearch } from '../api/export'
-
-// 命主星保留在下拉選單，後端查詢時自動轉為 is_lord = TRUE
-const PLANETS = [
-    '太陽', '月亮', '水星', '金星', '火星',
-    '木星', '土星', '天王星', '海王星', '冥王星', '凱龍星', '命主星'
-]
-
-const SIGNS = [
-    '牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座',
-    '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'
-]
+import { PLANET_OPTIONS, SIGN_OPTIONS } from '../utils/codeMap'
 
 function Search() {
     const navigate = useNavigate()
@@ -69,16 +59,22 @@ function Search() {
             <Row className="g-3 mb-4">
                 <Col md={3}>
                     <Form.Label>行星 *</Form.Label>
+                    {/* Select value 存代碼（如 'Q'），送給後端直接比對 planet_positions.planet */}
                     <Form.Select value={planet} onChange={e => setPlanet(e.target.value)}>
                         <option value="">-- 選擇行星 --</option>
-                        {PLANETS.map(p => <option key={p} value={p}>{p}</option>)}
+                        {PLANET_OPTIONS.map(p => (
+                            <option key={p.code} value={p.code}>{p.label}</option>
+                        ))}
                     </Form.Select>
                 </Col>
                 <Col md={3}>
                     <Form.Label>星座 *</Form.Label>
+                    {/* Select value 存代碼（如 'g'），送給後端直接比對 planet_positions.sign */}
                     <Form.Select value={sign} onChange={e => setSign(e.target.value)}>
                         <option value="">-- 選擇星座 --</option>
-                        {SIGNS.map(s => <option key={s} value={s}>{s}</option>)}
+                        {SIGN_OPTIONS.map(s => (
+                            <option key={s.code} value={s.code}>{s.label}</option>
+                        ))}
                     </Form.Select>
                 </Col>
                 <Col md={2}>
