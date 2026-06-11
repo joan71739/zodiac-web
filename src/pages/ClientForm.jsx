@@ -2,11 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Form, Button, Card, Alert, Spinner, Row, Col } from 'react-bootstrap'
 import { getClient, createClient, updateClient } from '../api/clients'
-
-const SIGNS = [
-    '牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座',
-    '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'
-]
+import { SIGN_OPTIONS } from '../utils/codeMap'
 
 function ClientForm() {
     const { id } = useParams()
@@ -14,16 +10,16 @@ function ClientForm() {
     const isEdit = !!id
 
     const [formData, setFormData] = useState({
-        name: '',
-        birthDate: '',
-        birthTime: '',
-        birthPlace: '',
-        ascSign: '',
+        name:         '',
+        birthDate:    '',
+        birthTime:    '',
+        birthPlace:   '',
+        ascSign:      '',   // 星座代碼，如 'j'
         ascDegreeNum: '',
         ascMinuteNum: '',
-        mcSign: '',
-        mcDegreeNum: '',
-        mcMinuteNum: '',
+        mcSign:       '',   // 星座代碼，如 'f'
+        mcDegreeNum:  '',
+        mcMinuteNum:  '',
     })
     const [loading, setLoading] = useState(isEdit)
     const [submitting, setSubmitting] = useState(false)
@@ -35,15 +31,16 @@ function ClientForm() {
             try {
                 const res = await getClient(id)
                 const c = res.data
+                // ascSign / mcSign 後端回傳的已是代碼，直接填入 Select value 即可
                 setFormData({
-                    name:         c.name        || '',
-                    birthDate:    c.birthDate   || '',
-                    birthTime:    c.birthTime   || '',
-                    birthPlace:   c.birthPlace  || '',
-                    ascSign:      c.ascSign      ?? '',
+                    name:         c.name         || '',
+                    birthDate:    c.birthDate    || '',
+                    birthTime:    c.birthTime    || '',
+                    birthPlace:   c.birthPlace   || '',
+                    ascSign:      c.ascSign       ?? '',
                     ascDegreeNum: c.ascDegreeNum != null ? String(c.ascDegreeNum) : '',
                     ascMinuteNum: c.ascMinuteNum != null ? String(c.ascMinuteNum) : '',
-                    mcSign:       c.mcSign       ?? '',
+                    mcSign:       c.mcSign        ?? '',
                     mcDegreeNum:  c.mcDegreeNum  != null ? String(c.mcDegreeNum)  : '',
                     mcMinuteNum:  c.mcMinuteNum  != null ? String(c.mcMinuteNum)  : '',
                 })
@@ -70,15 +67,16 @@ function ClientForm() {
             setSubmitting(true)
 
             // 數字欄位空字串 → null，避免後端 Integer 轉型錯誤
+            // ascSign / mcSign 已是代碼字串，直接送出
             const payload = {
                 name:         formData.name.trim(),
-                birthDate:    formData.birthDate   || null,
-                birthTime:    formData.birthTime   || null,
-                birthPlace:   formData.birthPlace  || null,
-                ascSign:      formData.ascSign      || null,
+                birthDate:    formData.birthDate    || null,
+                birthTime:    formData.birthTime    || null,
+                birthPlace:   formData.birthPlace   || null,
+                ascSign:      formData.ascSign       || null,
                 ascDegreeNum: formData.ascDegreeNum !== '' ? Number(formData.ascDegreeNum) : null,
                 ascMinuteNum: formData.ascMinuteNum !== '' ? Number(formData.ascMinuteNum) : null,
-                mcSign:       formData.mcSign       || null,
+                mcSign:       formData.mcSign        || null,
                 mcDegreeNum:  formData.mcDegreeNum  !== '' ? Number(formData.mcDegreeNum)  : null,
                 mcMinuteNum:  formData.mcMinuteNum  !== '' ? Number(formData.mcMinuteNum)  : null,
             }
@@ -167,14 +165,15 @@ function ClientForm() {
                         <Form.Label className="fw-semibold">上升點 ASC</Form.Label>
                         <Row className="mb-3 g-2">
                             <Col md={5}>
+                                {/* Select value 存代碼，option label 顯示中文 */}
                                 <Form.Select
                                     name="ascSign"
                                     value={formData.ascSign}
                                     onChange={handleChange}
                                 >
                                     <option value="">-- 星座 --</option>
-                                    {SIGNS.map(s => (
-                                        <option key={s} value={s}>{s}</option>
+                                    {SIGN_OPTIONS.map(s => (
+                                        <option key={s.code} value={s.code}>{s.label}</option>
                                     ))}
                                 </Form.Select>
                             </Col>
@@ -211,8 +210,8 @@ function ClientForm() {
                                     onChange={handleChange}
                                 >
                                     <option value="">-- 星座 --</option>
-                                    {SIGNS.map(s => (
-                                        <option key={s} value={s}>{s}</option>
+                                    {SIGN_OPTIONS.map(s => (
+                                        <option key={s.code} value={s.code}>{s.label}</option>
                                     ))}
                                 </Form.Select>
                             </Col>
