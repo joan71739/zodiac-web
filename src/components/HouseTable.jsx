@@ -1,3 +1,6 @@
+// HouseTable.jsx — 宮位守護星 (v18)
+// 修改說明：新增 houseSign 欄位（宮位起始星座）
+
 import { useState, useEffect } from 'react'
 import { Table, Form, Button, Spinner, Alert } from 'react-bootstrap'
 import { getHouses, createHouses, updateHouse } from '../api/clients'
@@ -7,18 +10,19 @@ const HOUSES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
 const defaultRows = () =>
     Array.from({ length: 12 }, (_, i) => ({
-        id: null,
-        houseNumber: i + 1,
+        id:           null,
+        houseNumber:  i + 1,
+        houseSign:    '',       // v18 新增
         rulingPlanet: '',
-        fliesToSign: '',
+        fliesToSign:  '',
         fliesToHouse: '',
     }))
 
 function HouseTable({ clientId }) {
-    const [houses, setHouses] = useState(defaultRows())
-    const [loading, setLoading] = useState(true)
-    const [savingIndex, setSavingIndex] = useState(null)
-    const [errorMsg, setErrorMsg] = useState('')
+    const [houses,       setHouses]       = useState(defaultRows())
+    const [loading,      setLoading]      = useState(true)
+    const [savingIndex,  setSavingIndex]  = useState(null)
+    const [errorMsg,     setErrorMsg]     = useState('')
     const [successIndex, setSuccessIndex] = useState(null)
     const isFirstCreate = houses.every(h => h.id === null)
 
@@ -27,7 +31,6 @@ function HouseTable({ clientId }) {
             try {
                 const res = await getHouses(clientId)
                 if (res.data && res.data.length > 0) {
-                    // merge by houseNumber，確保 1~12 宮固定順序
                     const merged = defaultRows().map(def => {
                         const found = res.data.find(h => h.houseNumber === def.houseNumber)
                         return found ? { ...def, ...found } : def
@@ -50,14 +53,14 @@ function HouseTable({ clientId }) {
     }
 
     // 初次建立：POST 整批 12 筆
-    // merge 模式確保 JPA saveAll 回傳順序不影響 UI 宮位排序
     const handleCreateAll = async () => {
         try {
             setSavingIndex('all')
             const payload = houses.map(h => ({
                 houseNumber:  h.houseNumber,
-                rulingPlanet: h.rulingPlanet || null,  // 代碼，如 'Q'
-                fliesToSign:  h.fliesToSign  || null,  // 代碼，如 'g'
+                houseSign:    h.houseSign    || null,   // v18 新增
+                rulingPlanet: h.rulingPlanet || null,
+                fliesToSign:  h.fliesToSign  || null,
                 fliesToHouse: h.fliesToHouse !== '' ? parseInt(h.fliesToHouse) : null,
             }))
             const res = await createHouses(clientId, payload)
@@ -81,6 +84,7 @@ function HouseTable({ clientId }) {
             setSavingIndex(index)
             const payload = {
                 houseNumber:  row.houseNumber,
+                houseSign:    row.houseSign    || null,   // v18 新增
                 rulingPlanet: row.rulingPlanet || null,
                 fliesToSign:  row.fliesToSign  || null,
                 fliesToHouse: row.fliesToHouse !== '' ? parseInt(row.fliesToHouse) : null,
@@ -128,6 +132,7 @@ function HouseTable({ clientId }) {
                 <thead className="table-dark">
                     <tr>
                         <th>宮位</th>
+                        <th>宮位星座</th>
                         <th>守護星</th>
                         <th>飛入星座</th>
                         <th>飛入宮位</th>
@@ -141,11 +146,25 @@ function HouseTable({ clientId }) {
                                 {row.houseNumber} 宮
                             </td>
 
-                            {/* 守護星：Select 存代碼，顯示中文 label */}
+                            {/* 宮位起始星座（v18 新增） */}
                             <td>
                                 <Form.Select
                                     size="sm"
-                                    value={row.rulingPlanet}
+                                    value={row.houseSign ?? ''}
+                                    onChange={e => handleChange(index, 'houseSign', e.target.value)}
+                                >
+                                    <option value="">--</option>
+                                    {SIGN_OPTIONS.map(s => (
+                                        <option key={s.code} value={s.code}>{s.label}</option>
+                                    ))}
+                                </Form.Select>
+                            </td>
+
+                            {/* 守護星 */}
+                            <td>
+                                <Form.Select
+                                    size="sm"
+                                    value={row.rulingPlanet ?? ''}
                                     onChange={e => handleChange(index, 'rulingPlanet', e.target.value)}
                                 >
                                     <option value="">--</option>
@@ -155,11 +174,11 @@ function HouseTable({ clientId }) {
                                 </Form.Select>
                             </td>
 
-                            {/* 飛入星座：Select 存代碼，顯示中文 label */}
+                            {/* 飛入星座 */}
                             <td>
                                 <Form.Select
                                     size="sm"
-                                    value={row.fliesToSign}
+                                    value={row.fliesToSign ?? ''}
                                     onChange={e => handleChange(index, 'fliesToSign', e.target.value)}
                                 >
                                     <option value="">--</option>
@@ -169,10 +188,11 @@ function HouseTable({ clientId }) {
                                 </Form.Select>
                             </td>
 
+                            {/* 飛入宮位 */}
                             <td>
                                 <Form.Select
                                     size="sm"
-                                    value={row.fliesToHouse}
+                                    value={row.fliesToHouse ?? ''}
                                     onChange={e => handleChange(index, 'fliesToHouse', e.target.value)}
                                 >
                                     <option value="">--</option>
