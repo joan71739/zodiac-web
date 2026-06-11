@@ -17,6 +17,7 @@ import {
 } from 'react-bootstrap';
 import axios from 'axios';
 import { exportChart } from '../api/export';
+import { signLabel } from '../utils/codeMap';
 
 import ChartImage      from '../components/ChartImage';
 import PlanetTable     from '../components/PlanetTable';
@@ -72,8 +73,7 @@ export default function ClientDetail() {
 
   /**
    * 組裝 AI 背景 context
-   * AIChatModal 接受 noteTitle / noteContent；
-   * 從客戶詳細頁發起時，以基本資料摘要填入 noteContent。
+   * ascSign / mcSign 存的是代碼（如 'j'），透過 signLabel() 轉為中文再給 AI。
    * null 欄位以 .filter(Boolean) 過濾，不產生空白行。
    */
   function buildAiContext(c) {
@@ -82,9 +82,9 @@ export default function ClientDetail() {
       c.birthTime  && `出生時間：${c.birthTime}`,
       c.birthPlace && `出生地：${c.birthPlace}`,
       c.ascSign
-        && `上升點：${c.ascSign} ${c.ascDegreeNum ?? 0}°${String(c.ascMinuteNum ?? 0).padStart(2, '0')}'`,
+        && `上升點：${signLabel(c.ascSign)} ${c.ascDegreeNum ?? 0}°${String(c.ascMinuteNum ?? 0).padStart(2, '0')}'`,
       c.mcSign
-        && `天頂：${c.mcSign} ${c.mcDegreeNum ?? 0}°${String(c.mcMinuteNum ?? 0).padStart(2, '0')}'`,
+        && `天頂：${signLabel(c.mcSign)} ${c.mcDegreeNum ?? 0}°${String(c.mcMinuteNum ?? 0).padStart(2, '0')}'`,
     ].filter(Boolean).join('\n');
   }
 
@@ -136,7 +136,7 @@ export default function ClientDetail() {
           <Row>
             <Col lg={7} className="mb-3">
 
-              {/* 上升 / 天頂四軸資訊（v9 欄位，允許 null） */}
+              {/* 上升 / 天頂四軸資訊：signLabel() 將代碼轉為中文顯示 */}
               <Card className="mb-3">
                 <Card.Body>
                   <Row>
@@ -144,7 +144,7 @@ export default function ClientDetail() {
                       <div className="text-muted mb-1">上升 ASC</div>
                       <div className="fw-semibold">
                         {client.ascSign
-                          ? `${client.ascSign} ${client.ascDegreeNum ?? 0}°${String(client.ascMinuteNum ?? 0).padStart(2, '0')}'`
+                          ? `${signLabel(client.ascSign)} ${client.ascDegreeNum ?? 0}°${String(client.ascMinuteNum ?? 0).padStart(2, '0')}'`
                           : '尚未設定'}
                       </div>
                     </Col>
@@ -152,7 +152,7 @@ export default function ClientDetail() {
                       <div className="text-muted mb-1">天頂 MC</div>
                       <div className="fw-semibold">
                         {client.mcSign
-                          ? `${client.mcSign} ${client.mcDegreeNum ?? 0}°${String(client.mcMinuteNum ?? 0).padStart(2, '0')}'`
+                          ? `${signLabel(client.mcSign)} ${client.mcDegreeNum ?? 0}°${String(client.mcMinuteNum ?? 0).padStart(2, '0')}'`
                           : '尚未設定'}
                       </div>
                     </Col>
