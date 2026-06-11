@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Table, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap'
 import { getAspects, createAspect, updateAspect, deleteAspect } from '../api/clients'
-
-const PLANETS = [
-    '太陽', '月亮', '水星', '金星', '火星',
-    '木星', '土星', '天王星', '海王星', '冥王星'
-]
-
-const ASPECT_TYPES = [
-    { value: 'CONJUNCTION', label: '☌ 合相（0°）' },
-    { value: 'SEXTILE', label: '✱ 六分相（60°）' },
-    { value: 'SQUARE', label: '☐ 四分相（90°）' },
-    { value: 'TRINE', label: '△ 三分相（120°）' },
-    { value: 'OPPOSITION', label: '☍ 對分相（180°）' },
-]
+import { PLANET_OPTIONS, ASPECT_OPTIONS, planetLabel, aspectFullLabel } from '../utils/codeMap'
 
 const emptyForm = { planet1: '', aspectType: '', planet2: '', orb: '', notes: '' }
 
@@ -48,7 +36,10 @@ function AspectTable({ clientId }) {
         if (!form.planet1 || !form.aspectType || !form.planet2) return
         try {
             setSaving(true)
-            const payload = { ...form, orb: form.orb !== '' ? parseFloat(form.orb) : null }
+            const payload = {
+                ...form,
+                orb: form.orb !== '' ? parseFloat(form.orb) : null,
+            }
             const res = await createAspect(clientId, payload)
             setAspects([...aspects, res.data])
             setForm(emptyForm)
@@ -72,11 +63,11 @@ function AspectTable({ clientId }) {
         try {
             setSaving(true)
             const payload = {
-                planet1: editForm.planet1,
+                planet1:    editForm.planet1,
                 aspectType: editForm.aspectType,
-                planet2: editForm.planet2,
-                orb: editForm.orb !== '' ? parseFloat(editForm.orb) : null,
-                notes: editForm.notes
+                planet2:    editForm.planet2,
+                orb:        editForm.orb !== '' ? parseFloat(editForm.orb) : null,
+                notes:      editForm.notes,
             }
             const res = await updateAspect(clientId, editingId, payload)
             setAspects(aspects.map(a => a.id === editingId ? res.data : a))
@@ -104,33 +95,68 @@ function AspectTable({ clientId }) {
         <div>
             <h6 className="mb-3">重要相位</h6>
 
-            {errorMsg && <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">{errorMsg}</Alert>}
+            {errorMsg && (
+                <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">
+                    {errorMsg}
+                </Alert>
+            )}
 
-            {/* 新增表單 */}
+            {/* 新增表單：Select 存代碼，顯示中文 label */}
             <Row className="g-2 mb-3 align-items-end">
                 <Col md={2}>
-                    <Form.Select size="sm" value={form.planet1} onChange={e => handleFormChange('planet1', e.target.value)}>
+                    <Form.Select
+                        size="sm"
+                        value={form.planet1}
+                        onChange={e => handleFormChange('planet1', e.target.value)}
+                    >
                         <option value="">行星 1</option>
-                        {PLANETS.map(p => <option key={p} value={p}>{p}</option>)}
+                        {PLANET_OPTIONS.map(p => (
+                            <option key={p.code} value={p.code}>{p.label}</option>
+                        ))}
                     </Form.Select>
                 </Col>
                 <Col md={2}>
-                    <Form.Select size="sm" value={form.aspectType} onChange={e => handleFormChange('aspectType', e.target.value)}>
+                    <Form.Select
+                        size="sm"
+                        value={form.aspectType}
+                        onChange={e => handleFormChange('aspectType', e.target.value)}
+                    >
                         <option value="">相位</option>
-                        {ASPECT_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                        {ASPECT_OPTIONS.map(a => (
+                            <option key={a.code} value={a.code}>{a.label}</option>
+                        ))}
                     </Form.Select>
                 </Col>
                 <Col md={2}>
-                    <Form.Select size="sm" value={form.planet2} onChange={e => handleFormChange('planet2', e.target.value)}>
+                    <Form.Select
+                        size="sm"
+                        value={form.planet2}
+                        onChange={e => handleFormChange('planet2', e.target.value)}
+                    >
                         <option value="">行星 2</option>
-                        {PLANETS.map(p => <option key={p} value={p}>{p}</option>)}
+                        {PLANET_OPTIONS.map(p => (
+                            <option key={p.code} value={p.code}>{p.label}</option>
+                        ))}
                     </Form.Select>
                 </Col>
                 <Col md={1}>
-                    <Form.Control size="sm" type="number" step="0.1" placeholder="角距" value={form.orb} onChange={e => handleFormChange('orb', e.target.value)} />
+                    <Form.Control
+                        size="sm"
+                        type="number"
+                        step="0.1"
+                        placeholder="角距"
+                        value={form.orb}
+                        onChange={e => handleFormChange('orb', e.target.value)}
+                    />
                 </Col>
                 <Col md={3}>
-                    <Form.Control size="sm" type="text" placeholder="備註" value={form.notes} onChange={e => handleFormChange('notes', e.target.value)} />
+                    <Form.Control
+                        size="sm"
+                        type="text"
+                        placeholder="備註"
+                        value={form.notes}
+                        onChange={e => handleFormChange('notes', e.target.value)}
+                    />
                 </Col>
                 <Col md={2}>
                     <Button size="sm" variant="success" onClick={handleAdd} disabled={saving}>
@@ -159,25 +185,54 @@ function AspectTable({ clientId }) {
                             editingId === a.id ? (
                                 <tr key={a.id}>
                                     <td>
-                                        <Form.Select size="sm" value={editForm.planet1} onChange={e => handleEditChange('planet1', e.target.value)}>
-                                            {PLANETS.map(p => <option key={p} value={p}>{p}</option>)}
+                                        <Form.Select
+                                            size="sm"
+                                            value={editForm.planet1}
+                                            onChange={e => handleEditChange('planet1', e.target.value)}
+                                        >
+                                            {PLANET_OPTIONS.map(p => (
+                                                <option key={p.code} value={p.code}>{p.label}</option>
+                                            ))}
                                         </Form.Select>
                                     </td>
                                     <td>
-                                        <Form.Select size="sm" value={editForm.aspectType} onChange={e => handleEditChange('aspectType', e.target.value)}>
-                                            {ASPECT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                        <Form.Select
+                                            size="sm"
+                                            value={editForm.aspectType}
+                                            onChange={e => handleEditChange('aspectType', e.target.value)}
+                                        >
+                                            {ASPECT_OPTIONS.map(t => (
+                                                <option key={t.code} value={t.code}>{t.label}</option>
+                                            ))}
                                         </Form.Select>
                                     </td>
                                     <td>
-                                        <Form.Select size="sm" value={editForm.planet2} onChange={e => handleEditChange('planet2', e.target.value)}>
-                                            {PLANETS.map(p => <option key={p} value={p}>{p}</option>)}
+                                        <Form.Select
+                                            size="sm"
+                                            value={editForm.planet2}
+                                            onChange={e => handleEditChange('planet2', e.target.value)}
+                                        >
+                                            {PLANET_OPTIONS.map(p => (
+                                                <option key={p.code} value={p.code}>{p.label}</option>
+                                            ))}
                                         </Form.Select>
                                     </td>
                                     <td>
-                                        <Form.Control size="sm" type="number" step="0.1" value={editForm.orb} onChange={e => handleEditChange('orb', e.target.value)} />
+                                        <Form.Control
+                                            size="sm"
+                                            type="number"
+                                            step="0.1"
+                                            value={editForm.orb}
+                                            onChange={e => handleEditChange('orb', e.target.value)}
+                                        />
                                     </td>
                                     <td>
-                                        <Form.Control size="sm" type="text" value={editForm.notes} onChange={e => handleEditChange('notes', e.target.value)} />
+                                        <Form.Control
+                                            size="sm"
+                                            type="text"
+                                            value={editForm.notes}
+                                            onChange={e => handleEditChange('notes', e.target.value)}
+                                        />
                                     </td>
                                     <td>
                                         <Button size="sm" variant="primary" className="me-1" onClick={handleSaveEdit} disabled={saving}>確認</Button>
@@ -186,9 +241,10 @@ function AspectTable({ clientId }) {
                                 </tr>
                             ) : (
                                 <tr key={a.id}>
-                                    <td>{a.planet1}</td>
-                                    <td>{ASPECT_TYPES.find(t => t.value === a.aspectType)?.label || a.aspectType}</td>
-                                    <td>{a.planet2}</td>
+                                    {/* 顯示時由代碼轉中文 */}
+                                    <td>{planetLabel(a.planet1)}</td>
+                                    <td>{aspectFullLabel(a.aspectType)}</td>
+                                    <td>{planetLabel(a.planet2)}</td>
                                     <td>{a.orb}</td>
                                     <td>{a.notes}</td>
                                     <td>
