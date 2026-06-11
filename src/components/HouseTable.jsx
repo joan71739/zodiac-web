@@ -1,16 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Table, Form, Button, Spinner, Alert } from 'react-bootstrap'
 import { getHouses, createHouses, updateHouse } from '../api/clients'
-
-const SIGNS = [
-    '牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座',
-    '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'
-]
-
-const PLANETS = [
-    '太陽', '月亮', '水星', '金星', '火星',
-    '木星', '土星', '天王星', '海王星', '冥王星', '凱龍星', '命主星'
-]
+import { PLANET_OPTIONS, SIGN_OPTIONS, planetLabel, signLabel } from '../utils/codeMap'
 
 const HOUSES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
@@ -20,7 +11,7 @@ const defaultRows = () =>
         houseNumber: i + 1,
         rulingPlanet: '',
         fliesToSign: '',
-        fliesToHouse: ''
+        fliesToHouse: '',
     }))
 
 function HouseTable({ clientId }) {
@@ -36,6 +27,7 @@ function HouseTable({ clientId }) {
             try {
                 const res = await getHouses(clientId)
                 if (res.data && res.data.length > 0) {
+                    // merge by houseNumber，確保 1~12 宮固定順序
                     const merged = defaultRows().map(def => {
                         const found = res.data.find(h => h.houseNumber === def.houseNumber)
                         return found ? { ...def, ...found } : def
@@ -58,18 +50,17 @@ function HouseTable({ clientId }) {
     }
 
     // 初次建立：POST 整批 12 筆
-    // BUG FIX：改用 merge 模式，確保 JPA saveAll 回傳順序不影響 UI 宮位排序
+    // merge 模式確保 JPA saveAll 回傳順序不影響 UI 宮位排序
     const handleCreateAll = async () => {
         try {
             setSavingIndex('all')
             const payload = houses.map(h => ({
-                houseNumber: h.houseNumber,
-                rulingPlanet: h.rulingPlanet,
-                fliesToSign: h.fliesToSign,
-                fliesToHouse: h.fliesToHouse !== '' ? parseInt(h.fliesToHouse) : null
+                houseNumber:  h.houseNumber,
+                rulingPlanet: h.rulingPlanet || null,  // 代碼，如 'Q'
+                fliesToSign:  h.fliesToSign  || null,  // 代碼，如 'g'
+                fliesToHouse: h.fliesToHouse !== '' ? parseInt(h.fliesToHouse) : null,
             }))
             const res = await createHouses(clientId, payload)
-            // merge by houseNumber，確保 1~12 宮固定順序，不受 JPA saveAll 回傳順序影響
             const merged = defaultRows().map(def => {
                 const found = res.data.find(h => h.houseNumber === def.houseNumber)
                 return found ? { ...def, ...found } : def
@@ -89,10 +80,10 @@ function HouseTable({ clientId }) {
         try {
             setSavingIndex(index)
             const payload = {
-                houseNumber: row.houseNumber,
-                rulingPlanet: row.rulingPlanet,
-                fliesToSign: row.fliesToSign,
-                fliesToHouse: row.fliesToHouse !== '' ? parseInt(row.fliesToHouse) : null
+                houseNumber:  row.houseNumber,
+                rulingPlanet: row.rulingPlanet || null,
+                fliesToSign:  row.fliesToSign  || null,
+                fliesToHouse: row.fliesToHouse !== '' ? parseInt(row.fliesToHouse) : null,
             }
             const res = await updateHouse(clientId, row.id, payload)
             const updated = [...houses]
@@ -121,12 +112,17 @@ function HouseTable({ clientId }) {
                         disabled={savingIndex === 'all'}
                     >
                         {savingIndex === 'all'
-                            ? <Spinner animation="border" size="sm" /> : '初次建立全部'}
+                            ? <Spinner animation="border" size="sm" />
+                            : '初次建立全部'}
                     </Button>
                 )}
             </div>
 
-            {errorMsg && <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">{errorMsg}</Alert>}
+            {errorMsg && (
+                <Alert variant="danger" dismissible onClose={() => setErrorMsg('')} className="py-2">
+                    {errorMsg}
+                </Alert>
+            )}
 
             <Table bordered hover responsive size="sm">
                 <thead className="table-dark">
@@ -141,7 +137,11 @@ function HouseTable({ clientId }) {
                 <tbody>
                     {houses.map((row, index) => (
                         <tr key={row.houseNumber}>
-                            <td className="align-middle fw-bold text-center">{row.houseNumber} 宮</td>
+                            <td className="align-middle fw-bold text-center">
+                                {row.houseNumber} 宮
+                            </td>
+
+                            {/* 守護星：Select 存代碼，顯示中文 label */}
                             <td>
                                 <Form.Select
                                     size="sm"
@@ -149,9 +149,13 @@ function HouseTable({ clientId }) {
                                     onChange={e => handleChange(index, 'rulingPlanet', e.target.value)}
                                 >
                                     <option value="">--</option>
-                                    {PLANETS.map(p => <option key={p} value={p}>{p}</option>)}
+                                    {PLANET_OPTIONS.map(p => (
+                                        <option key={p.code} value={p.code}>{p.label}</option>
+                                    ))}
                                 </Form.Select>
                             </td>
+
+                            {/* 飛入星座：Select 存代碼，顯示中文 label */}
                             <td>
                                 <Form.Select
                                     size="sm"
@@ -159,9 +163,12 @@ function HouseTable({ clientId }) {
                                     onChange={e => handleChange(index, 'fliesToSign', e.target.value)}
                                 >
                                     <option value="">--</option>
-                                    {SIGNS.map(s => <option key={s} value={s}>{s}</option>)}
+                                    {SIGN_OPTIONS.map(s => (
+                                        <option key={s.code} value={s.code}>{s.label}</option>
+                                    ))}
                                 </Form.Select>
                             </td>
+
                             <td>
                                 <Form.Select
                                     size="sm"
@@ -169,13 +176,16 @@ function HouseTable({ clientId }) {
                                     onChange={e => handleChange(index, 'fliesToHouse', e.target.value)}
                                 >
                                     <option value="">--</option>
-                                    {HOUSES.map(h => <option key={h} value={h}>{h} 宮</option>)}
+                                    {HOUSES.map(h => (
+                                        <option key={h} value={h}>{h} 宮</option>
+                                    ))}
                                 </Form.Select>
                             </td>
+
                             {!isFirstCreate && (
                                 <td className="text-center align-middle">
                                     {successIndex === index ? (
-                                        <span className="text-success small">✅</span>
+                                        <span className="text-success small">✓</span>
                                     ) : (
                                         <Button
                                             variant="outline-primary"
