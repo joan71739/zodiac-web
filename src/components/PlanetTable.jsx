@@ -1,34 +1,26 @@
 import { useState, useEffect } from 'react'
 import { Table, Form, Button, Spinner, Alert } from 'react-bootstrap'
 import { getPlanets, createPlanets, updatePlanet } from '../api/clients'
+import { PLANET_OPTIONS, SIGN_OPTIONS, planetLabel, signLabel } from '../utils/codeMap'
 
-// v8：移除「命主星」，改為 checkbox
-const PLANETS = [
-    '太陽', '月亮', '水星', '金星', '火星',
-    '木星', '土星', '天王星', '海王星', '冥王星',
-    '凱龍星'
-]
+// 行星代碼清單（用於 defaultRows 初始化，順序對應 DB 存入順序）
+const PLANET_CODES = PLANET_OPTIONS.map(o => o.code)
 
 // 只有這 7 個內行星可以標記為命主星
-const LORD_ELIGIBLE = new Set(['太陽', '月亮', '水星', '金星', '火星', '木星', '土星'])
-
-const SIGNS = [
-    '牡羊座', '金牛座', '雙子座', '巨蟹座', '獅子座', '處女座',
-    '天秤座', '天蠍座', '射手座', '摩羯座', '水瓶座', '雙魚座'
-]
+const LORD_ELIGIBLE = new Set(['Q', 'W', 'E', 'R', 'T', 'Y', 'U'])
 
 const HOUSES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
 const defaultRows = () =>
-    PLANETS.map(name => ({
+    PLANET_CODES.map(code => ({
         id: null,
-        planet: name,
+        planet: code,
         sign: '',
         degreeNum: '',
         minuteNum: '',
         house: '',
         notes: '',
-        isLord: false   // v8 新增
+        isLord: false,
     }))
 
 function PlanetTable({ clientId }) {
@@ -44,6 +36,7 @@ function PlanetTable({ clientId }) {
             try {
                 const res = await getPlanets(clientId)
                 if (res.data && res.data.length > 0) {
+                    // merge by planet 代碼，確保順序固定
                     const merged = defaultRows().map(def => {
                         const found = res.data.find(p => p.planet === def.planet)
                         return found ? { ...def, ...found } : def
@@ -65,12 +58,12 @@ function PlanetTable({ clientId }) {
         setPlanets(updated)
     }
 
-    // v8：命主星 checkbox — 點選後同批其他行全部取消（只能有一個）
+    // 命主星 checkbox：點選後同批其他行全部取消（只能有一個）
     const handleLordToggle = (index) => {
         const isCurrentlyLord = planets[index].isLord
         const updated = planets.map((p, i) => ({
             ...p,
-            isLord: i === index ? !isCurrentlyLord : false
+            isLord: i === index ? !isCurrentlyLord : false,
         }))
         setPlanets(updated)
     }
@@ -80,13 +73,13 @@ function PlanetTable({ clientId }) {
         try {
             setSavingIndex('all')
             const payload = planets.map(p => ({
-                planet: p.planet,
-                sign: p.sign,
+                planet:    p.planet,                                           // 代碼，如 'Q'
+                sign:      p.sign     || null,                                 // 代碼，如 'g'
                 degreeNum: p.degreeNum !== '' ? parseInt(p.degreeNum) : null,
                 minuteNum: p.minuteNum !== '' ? parseInt(p.minuteNum) : null,
-                house: p.house !== '' ? parseInt(p.house) : null,
-                notes: p.notes,
-                isLord: p.isLord  // v8 新增
+                house:     p.house    !== '' ? parseInt(p.house)     : null,
+                notes:     p.notes    || null,
+                isLord:    p.isLord,
             }))
             const res = await createPlanets(clientId, payload)
             const merged = defaultRows().map(def => {
@@ -108,13 +101,13 @@ function PlanetTable({ clientId }) {
         try {
             setSavingIndex(index)
             const payload = {
-                planet: row.planet,
-                sign: row.sign,
+                planet:    row.planet,
+                sign:      row.sign     || null,
                 degreeNum: row.degreeNum !== '' ? parseInt(row.degreeNum) : null,
                 minuteNum: row.minuteNum !== '' ? parseInt(row.minuteNum) : null,
-                house: row.house !== '' ? parseInt(row.house) : null,
-                notes: row.notes,
-                isLord: row.isLord  // v8 新增
+                house:     row.house    !== '' ? parseInt(row.house)     : null,
+                notes:     row.notes    || null,
+                isLord:    row.isLord,
             }
             const res = await updatePlanet(clientId, row.id, payload)
             const updated = [...planets]
@@ -142,7 +135,9 @@ function PlanetTable({ clientId }) {
                         onClick={handleCreateAll}
                         disabled={savingIndex === 'all'}
                     >
-                        {savingIndex === 'all' ? <Spinner animation="border" size="sm" /> : '初次建立全部'}
+                        {savingIndex === 'all'
+                            ? <Spinner animation="border" size="sm" />
+                            : '初次建立全部'}
                     </Button>
                 )}
             </div>
@@ -184,11 +179,13 @@ function PlanetTable({ clientId }) {
                                 ) : null}
                             </td>
 
+                            {/* 行星名稱：由代碼轉中文顯示 */}
                             <td className="align-middle fw-bold">
-                                {row.planet}
+                                {planetLabel(row.planet)}
                                 {row.isLord && <span className="ms-1 text-warning">★</span>}
                             </td>
 
+                            {/* 星座：Select 存代碼，顯示中文 label */}
                             <td>
                                 <Form.Select
                                     size="sm"
@@ -196,7 +193,9 @@ function PlanetTable({ clientId }) {
                                     onChange={e => handleChange(index, 'sign', e.target.value)}
                                 >
                                     <option value="">--</option>
-                                    {SIGNS.map(s => <option key={s} value={s}>{s}</option>)}
+                                    {SIGN_OPTIONS.map(s => (
+                                        <option key={s.code} value={s.code}>{s.label}</option>
+                                    ))}
                                 </Form.Select>
                             </td>
 
@@ -204,9 +203,9 @@ function PlanetTable({ clientId }) {
                                 <Form.Control
                                     size="sm"
                                     type="number"
-                                    min="0"
-                                    max="29"
-                                    placeholder="0~29"
+                                    min={0}
+                                    max={29}
+                                    placeholder="0-29"
                                     value={row.degreeNum}
                                     onChange={e => handleChange(index, 'degreeNum', e.target.value)}
                                 />
@@ -216,9 +215,9 @@ function PlanetTable({ clientId }) {
                                 <Form.Control
                                     size="sm"
                                     type="number"
-                                    min="0"
-                                    max="59"
-                                    placeholder="0~59"
+                                    min={0}
+                                    max={59}
+                                    placeholder="0-59"
                                     value={row.minuteNum}
                                     onChange={e => handleChange(index, 'minuteNum', e.target.value)}
                                 />
@@ -231,7 +230,9 @@ function PlanetTable({ clientId }) {
                                     onChange={e => handleChange(index, 'house', e.target.value)}
                                 >
                                     <option value="">--</option>
-                                    {HOUSES.map(h => <option key={h} value={h}>{h} 宮</option>)}
+                                    {HOUSES.map(h => (
+                                        <option key={h} value={h}>{h} 宮</option>
+                                    ))}
                                 </Form.Select>
                             </td>
 
@@ -239,7 +240,6 @@ function PlanetTable({ clientId }) {
                                 <Form.Control
                                     size="sm"
                                     type="text"
-                                    placeholder="備註"
                                     value={row.notes}
                                     onChange={e => handleChange(index, 'notes', e.target.value)}
                                 />
@@ -248,11 +248,11 @@ function PlanetTable({ clientId }) {
                             {!isFirstCreate && (
                                 <td className="text-center align-middle">
                                     {successIndex === index ? (
-                                        <span className="text-success small">✅</span>
+                                        <span className="text-success small">✓</span>
                                     ) : (
                                         <Button
-                                            variant="outline-primary"
                                             size="sm"
+                                            variant="outline-primary"
                                             onClick={() => handleSaveRow(index)}
                                             disabled={savingIndex === index}
                                         >
