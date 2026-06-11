@@ -98,13 +98,32 @@ export const ASPECT_OPTIONS = [
   { code: 'w', label: '☍ 對分相（180°）' },
 ]
 
+/** 主題分類選項（對應 code_references category='topic'） */
+export const TOPIC_OPTIONS = [
+  { code: 'general',   label: '核心特質／本質' },
+  { code: 'career',    label: '事業／職場／天賦' },
+  { code: 'love',      label: '感情／婚姻／人際' },
+  { code: 'wealth',    label: '金錢／財運／自我價值' },
+  { code: 'challenge', label: '盲點／危機／課題' },
+]
+
+export const TOPIC_CODE_MAP = {
+  general:   '核心特質／本質',
+  career:    '事業／職場／天賦',
+  love:      '感情／婚姻／人際',
+  wealth:    '金錢／財運／自我價值',
+  challenge: '盲點／危機／課題',
+}
+
 // ─── 轉換工具函式 ────────────────────────────────────────
 
 /** 代碼 → 中文，找不到時 fallback 顯示原始值 */
 export const planetLabel  = (code) => PLANET_CODE_MAP[code]  ?? code
 export const signLabel    = (code) => SIGN_CODE_MAP[code]    ?? code
 export const aspectLabel  = (code) => ASPECT_CODE_MAP[code]  ?? code
+export const topicLabel = (code) => TOPIC_CODE_MAP[code] ?? code
 
 /** 相位完整標籤（含符號），找不到時 fallback */
 export const aspectFullLabel = (code) =>
   ASPECT_OPTIONS.find(o => o.code === code)?.label ?? code
+
