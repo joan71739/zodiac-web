@@ -1,10 +1,6 @@
 // ============================================================
-// App.jsx — v12
-// 修改說明：新增行運解析相關路由
-//   /transits                                                    → TransitIndex
-//   /transits/planets/:transitPlanet                             → TransitIndex（導覽用，可選）
-//   /transits/planets/:transitPlanet/aspects/:aspectType/natal/:natalPlanet → TransitPlanetNotes
-//   /transits/planets/:transitPlanet/houses/:transitHouse        → TransitHouseNotes
+// App.jsx — v14
+// 修改說明：新增 /elements/planets/:planetKey → PlanetIndex（行星入口頁）
 // ============================================================
 
 import React from 'react';
@@ -22,10 +18,11 @@ import Backup       from './pages/Backup';
 import ElementIndex      from './pages/ElementIndex';
 import ElementSigns      from './pages/ElementSigns';
 import ElementPlanets    from './pages/ElementPlanets';
+import PlanetIndex       from './pages/PlanetIndex';        // ← 新增
 import SignNotes         from './pages/SignNotes';
 import PlanetSignNotes   from './pages/PlanetSignNotes';
 
-// 行運解析頁面（新增）
+// 行運解析頁面
 import TransitIndex       from './pages/TransitIndex';
 import TransitPlanetNotes from './pages/TransitPlanetNotes';
 import TransitHouseNotes  from './pages/TransitHouseNotes';
@@ -45,17 +42,20 @@ export default function App() {
                     <Route path="/backup"             element={<Backup />}       />
 
                     {/* ── 元素解析 ── */}
-                    <Route path="/elements"                                          element={<ElementIndex />}    />
-                    <Route path="/elements/signs"                                    element={<ElementSigns />}    />
-                    <Route path="/elements/signs/:signKey"                           element={<SignNotes />}       />
-                    <Route path="/elements/planets"                                  element={<ElementPlanets />}  />
-                    <Route path="/elements/planets/:planetKey/signs/:signKey"        element={<PlanetSignNotes />} />
+                    <Route path="/elements"                                       element={<ElementIndex />}   />
+                    <Route path="/elements/signs"                                 element={<ElementSigns />}   />
+                    <Route path="/elements/signs/:signKey"                        element={<SignNotes />}      />
+                    <Route path="/elements/planets"                               element={<ElementPlanets />} />
+                    {/* 各行星入口頁（顯示 12 星座按鈕） */}
+                    <Route path="/elements/planets/:planetKey"                    element={<PlanetIndex />}    />
+                    {/* 行星×星座解析頁（13 Tab） */}
+                    <Route path="/elements/planets/:planetKey/signs/:signKey"     element={<PlanetSignNotes />}/>
 
-                    {/* ── 行運解析（新增）── */}
-                    <Route path="/transits"                                                                        element={<TransitIndex />}       />
-                    <Route path="/transits/planets/:transitPlanet"                                                 element={<TransitIndex />}       />
-                    <Route path="/transits/planets/:transitPlanet/aspects/:aspectType/natal/:natalPlanet"          element={<TransitPlanetNotes />} />
-                    <Route path="/transits/planets/:transitPlanet/houses/:transitHouse"                            element={<TransitHouseNotes />}  />
+                    {/* ── 行運解析 ── */}
+                    <Route path="/transits"                                                                   element={<TransitIndex />}      />
+                    <Route path="/transits/planets/:transitPlanet"                                            element={<TransitIndex />}      />
+                    <Route path="/transits/planets/:transitPlanet/houses"                                     element={<TransitHouseNotes />} />
+                    <Route path="/transits/planets/:transitPlanet/aspects/:aspectType/natal/:natalPlanet"     element={<TransitPlanetNotes />}/>
 
                     {/* 404 */}
                     <Route path="*" element={
