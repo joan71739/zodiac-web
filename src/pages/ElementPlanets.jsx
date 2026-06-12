@@ -1,11 +1,10 @@
-// ElementPlanets.jsx — 十大行星頁
+// ElementPlanets.jsx — 十大行星總覽頁
 // 路由：/elements/planets
-// 說明：第一批只放匯入匯出按鈕（佔位），功能第二批實作
+// 說明：行星卡片可點擊，跳至 /elements/planets/:planetKey
 
+import { useNavigate } from 'react-router-dom'
 import { Alert } from 'react-bootstrap'
-import { SIGN_OPTIONS } from '../utils/codeMap'
 
-// 第一批七顆行星
 const PLANET_OPTIONS_7 = [
     { code: 'Q', label: '太陽', icon: '☀️' },
     { code: 'W', label: '月亮', icon: '🌙' },
@@ -17,40 +16,49 @@ const PLANET_OPTIONS_7 = [
 ]
 
 export default function ElementPlanets() {
-    const handleExport = () => {
-        alert('匯出功能開發中（第二批）')
-    }
-
-    const handleImport = () => {
-        alert('匯入功能開發中（第二批）')
-    }
+    const navigate = useNavigate()
 
     return (
         <div style={{ padding: '32px 40px', color: '#E8E0F0' }}>
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h4 style={{ color: '#D4AF37', margin: 0 }}>☀️ 十大行星</h4>
                 <div className="d-flex gap-2">
-                    <button onClick={handleImport} style={btnStyle}>
+                    <button onClick={() => alert('匯入功能開發中（第二批）')} style={btnStyle}>
                         ⬆ 匯入 JSON
                     </button>
-                    <button onClick={handleExport} style={btnStyle}>
+                    <button onClick={() => alert('匯出功能開發中（第二批）')} style={btnStyle}>
                         ⬇ 匯出 JSON
                     </button>
                 </div>
             </div>
 
-            <Alert variant="secondary" style={{ backgroundColor: '#1C1C2E', border: '1px solid #2D2D45', color: '#888', fontSize: '0.82rem' }}>
-                匯入 / 匯出功能開發中，請點擊左側行星展開星座進入解析頁面
+            <Alert variant="secondary" style={{
+                backgroundColor: '#1C1C2E', border: '1px solid #2D2D45',
+                color: '#888', fontSize: '0.82rem',
+            }}>
+                點擊行星進入各星座解析頁面，或從左側導覽列展開選擇
             </Alert>
 
-            {/* 行星列表 */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 24 }}>
+            {/* 行星卡片（可點擊） */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 24 }}>
                 {PLANET_OPTIONS_7.map(({ code, label, icon }) => (
-                    <div key={code} style={planetCardStyle}>
-                        <span style={{ marginRight: 6 }}>{icon}</span>
-                        {label}
-                        <div style={{ fontSize: '0.72rem', color: '#555', marginTop: 4 }}>
-                            {SIGN_OPTIONS.map(s => s.label.replace('座', '')).join(' ')}
+                    <div
+                        key={code}
+                        onClick={() => navigate(`/elements/planets/${code}`)}
+                        style={planetCardStyle}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.borderColor = '#D4AF37'
+                            e.currentTarget.style.color = '#D4AF37'
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = '#2D2D45'
+                            e.currentTarget.style.color = '#E8E0F0'
+                        }}
+                    >
+                        <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{icon}</div>
+                        <div style={{ fontWeight: 600 }}>{label}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#888', marginTop: 4 }}>
+                            點擊查看 12 星座 →
                         </div>
                     </div>
                 ))}
@@ -72,9 +80,12 @@ const btnStyle = {
 const planetCardStyle = {
     backgroundColor: '#1C1C2E',
     border: '1px solid #2D2D45',
-    borderRadius: 6,
-    padding: '12px 20px',
+    borderRadius: 8,
+    padding: '16px 24px',
     color: '#E8E0F0',
-    fontSize: '0.88rem',
+    fontSize: '0.9rem',
+    cursor: 'pointer',
     minWidth: 120,
+    textAlign: 'center',
+    transition: 'border-color 0.15s, color 0.15s',
 }
