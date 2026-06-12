@@ -1,8 +1,8 @@
 // ============================================================
-// Navbar.jsx — v14
-// 修改說明：行運解析 > 過境宮位，從「展開十二宮各自一葉」
-//           改為「直接 NavLink 跳頁」（頁面內含 13 Tab）
-//           同時移除 openHousesFor state 及 handleHousesToggle
+// Navbar.jsx — v15
+// 修改說明：元素解析 > 十大行星 > 各行星
+//   舊：點擊行星名稱 → 只展開/收合星座，不跳頁
+//   新：點擊行星名稱 → 跳至 /elements/planets/:planetKey + 同時展開星座列表
 // ============================================================
 
 import React, { useState } from 'react';
@@ -16,23 +16,22 @@ import {
 } from '../utils/codeMap';
 
 const NAV_ITEMS = [
-    { to: '/', label: '客戶列表', icon: '👥' },
+    { to: '/',       label: '客戶列表', icon: '👥' },
     { to: '/search', label: '行星篩選', icon: '🔍' },
     { to: '/backup', label: '備份管理', icon: '💾' },
 ]
 
 export default function Navbar() {
-    const [collapsed, setCollapsed] = useState(false)
+    const [collapsed,         setCollapsed]         = useState(false)
     // 元素解析
-    const [elemOpen, setElemOpen] = useState(false)
-    const [signsOpen, setSignsOpen] = useState(false)
-    const [planetsOpen, setPlanetsOpen] = useState(false)
-    const [openPlanetCode, setOpenPlanetCode] = useState(null)
+    const [elemOpen,          setElemOpen]          = useState(false)
+    const [signsOpen,         setSignsOpen]         = useState(false)
+    const [planetsOpen,       setPlanetsOpen]       = useState(false)
+    const [openPlanetCode,    setOpenPlanetCode]    = useState(null)
     // 行運解析
-    const [transitOpen, setTransitOpen] = useState(false)
+    const [transitOpen,       setTransitOpen]       = useState(false)
     const [openTransitPlanet, setOpenTransitPlanet] = useState(null)
-    const [openAspectKey, setOpenAspectKey] = useState(null)
-    // ↑ openHousesFor 已移除，過境宮位改為直接跳頁
+    const [openAspectKey,     setOpenAspectKey]     = useState(null)
 
     const location = useLocation()
     const navigate = useNavigate()
@@ -42,10 +41,15 @@ export default function Navbar() {
     const width = collapsed ? 56 : 220
 
     // ── 元素解析 handlers ────────────────────────────
-    const handleElemClick = () => { navigate('/elements'); setElemOpen(p => !p) }
-    const handleSignsClick = () => { navigate('/elements/signs'); setSignsOpen(p => !p) }
+    const handleElemClick    = () => { navigate('/elements');         setElemOpen(p => !p) }
+    const handleSignsClick   = () => { navigate('/elements/signs');   setSignsOpen(p => !p) }
     const handlePlanetsClick = () => { navigate('/elements/planets'); setPlanetsOpen(p => !p) }
-    const handlePlanetClick = (code) => setOpenPlanetCode(p => p === code ? null : code)
+
+    // 行星點擊：跳至行星入口頁 + 展開/收合星座列表
+    const handlePlanetClick = (code) => {
+        navigate(`/elements/planets/${code}`)
+        setOpenPlanetCode(p => p === code ? null : code)
+    }
 
     // ── 行運解析 handlers ────────────────────────────
     const handleTransitClick = () => { navigate('/transits'); setTransitOpen(p => !p) }
@@ -176,25 +180,37 @@ export default function Navbar() {
                                     <div style={{ paddingLeft: 10 }}>
                                         {PLANET_7_OPTIONS.map(({ code, label }) => {
                                             const isOpen = openPlanetCode === code
+                                            const isPlanetActive = location.pathname.startsWith(`/elements/planets/${code}`)
                                             return (
                                                 <div key={code}>
-                                                    <div onClick={() => handlePlanetClick(code)} style={{
-                                                        ...subMenuItemStyle, color: '#8080B0', fontSize: '0.82rem',
-                                                    }}>
+                                                    {/* 行星名稱：點擊跳頁 + 展開星座 */}
+                                                    <div
+                                                        onClick={() => handlePlanetClick(code)}
+                                                        style={{
+                                                            ...subMenuItemStyle,
+                                                            fontSize: '0.82rem',
+                                                            color: isPlanetActive ? '#D4AF37' : '#8080B0',
+                                                            backgroundColor: isPlanetActive ? '#252540' : 'transparent',
+                                                            borderLeft: isPlanetActive ? '2px solid #D4AF37' : '2px solid transparent',
+                                                        }}
+                                                    >
                                                         <span style={{ flex: 1 }}>{label}</span>
                                                         <span style={{ fontSize: '0.65rem', color: '#555' }}>{isOpen ? '▲' : '▼'}</span>
                                                     </div>
+                                                    {/* 展開後顯示 12 個星座葉節點 */}
                                                     {isOpen && (
                                                         <div style={{ paddingLeft: 10 }}>
                                                             {SIGN_OPTIONS.map(({ code: sCode, label: sLabel }) => (
-                                                                <NavLink key={sCode}
+                                                                <NavLink
+                                                                    key={sCode}
                                                                     to={`/elements/planets/${code}/signs/${sCode}`}
                                                                     style={({ isActive }) => ({
                                                                         ...leafItemStyle,
                                                                         color: isActive ? '#D4AF37' : '#5A5A80',
                                                                         backgroundColor: isActive ? '#252540' : 'transparent',
                                                                         borderLeft: isActive ? '2px solid #D4AF37' : '2px solid transparent',
-                                                                    })}>
+                                                                    })}
+                                                                >
                                                                     {sLabel}
                                                                 </NavLink>
                                                             ))}
@@ -230,7 +246,6 @@ export default function Navbar() {
                                     const isPlanetOpen = openTransitPlanet === pCode
                                     return (
                                         <div key={pCode}>
-                                            {/* 行星層：展開/收合 */}
                                             <div onClick={() => handleTransitPlanetClick(pCode)} style={{
                                                 ...subMenuItemStyle, color: '#9090B8',
                                             }}>
@@ -240,8 +255,7 @@ export default function Navbar() {
 
                                             {isPlanetOpen && (
                                                 <div style={{ paddingLeft: 10 }}>
-
-                                                    {/* ── 過境宮位：直接跳頁（不再展開十二宮）── */}
+                                                    {/* 過境宮位：直接跳頁 */}
                                                     <NavLink
                                                         to={`/transits/planets/${pCode}/houses`}
                                                         style={({ isActive }) => ({
@@ -256,7 +270,7 @@ export default function Navbar() {
                                                         過境宮位
                                                     </NavLink>
 
-                                                    {/* ── 各相位 ── */}
+                                                    {/* 各相位 */}
                                                     {ASPECT_SIMPLE_OPTIONS.map(({ code: aCode, label: aLabel }) => {
                                                         const aspectKey = `${pCode}-${aCode}`
                                                         const isAspectOpen = openAspectKey === aspectKey
@@ -322,7 +336,7 @@ export default function Navbar() {
 
             {!collapsed && (
                 <div style={{ padding: '10px 16px', borderTop: '1px solid #2D2D45', fontSize: '0.7rem', color: '#555' }}>
-                    v14
+                    v15
                 </div>
             )}
 
