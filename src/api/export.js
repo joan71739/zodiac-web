@@ -59,3 +59,21 @@ export const exportSearch = async (params) => {
     const res = await api.get('/export/search', { params, responseType: 'blob' })
     downloadBlob(res, 'export_search.json')
 }
+
+// 匯出元素解析：星座（planet_key IS NULL）
+export const exportElementSigns = async () => {
+    const res = await api.get('/export/element-notes/signs', { responseType: 'blob' })
+    downloadBlob(res, 'export_element_signs.json')
+}
+
+// 匯出元素解析：行星×星座（planet_key IS NOT NULL）
+export const exportElementPlanets = async () => {
+    const res = await api.get('/export/element-notes/planets', { responseType: 'blob' })
+    downloadBlob(res, 'export_element_planets.json')
+}
+
+// 匯出行運解析（全部）
+export const exportTransitNotes = async () => {
+    const res = await api.get('/export/transit-notes', { responseType: 'blob' })
+    downloadBlob(res, 'export_transit_notes.json')
+}
